@@ -1,0 +1,122 @@
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import type { User } from '../types';
+import { authApi, saveToken, getSavedToken, clearToken, decodeToken } from '../api';
+
+interface AuthContextType {
+  user: Omit<User, 'password'> | null;
+  staffLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  patientLogin: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  patientRegister: (username: string, password: string, name: string, email?: string) => Promise<{ success: boolean; error?: string }>;
+  googleAuth: (credential: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<Omit<User, 'password'> | null>(() => {
+    const token = getSavedToken();
+    if (token) {
+      const { valid, payload } = decodeToken(token);
+      if (valid && payload) {
+        return { id: payload.id, role: payload.role as User['role'], name: '', username: '' };
+      }
+    }
+    return null;
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  // ─── Staff & Admin: domain email login ─────────────────────────────────────
+  const staffLogin = useCallback(async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const res = await authApi.staffLogin(email, password);
+      if (res.status === 200) {
+        setUser(res.data.user);
+        saveToken(res.data.token);
+        return { success: true };
+      }
+      return { success: false, error: res.message || 'Login failed' };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // ─── Patient: username + password login ────────────────────────────────────
+  const patientLogin = useCallback(async (username: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const res = await authApi.patientLogin(username, password);
+      if (res.status === 200) {
+        setUser(res.data.user);
+        saveToken(res.data.token);
+        return { success: true };
+      }
+      return { success: false, error: res.message || 'Login failed' };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // ─── Patient: registration ─────────────────────────────────────────────────
+  const patientRegister = useCallback(async (username: string, password: string, name: string, email?: string) => {
+    setIsLoading(true);
+    try {
+      const res = await authApi.patientRegister(username, password, name, email);
+      if (res.status === 201) {
+        setUser(res.data.user);
+        saveToken(res.data.token);
+        return { success: true };
+      }
+      return { success: false, error: res.message || 'Registration failed' };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // ─── Patient: Google OAuth ─────────────────────────────────────────────────
+  const googleAuth = useCallback(async (credential: string) => {
+    setIsLoading(true);
+    try {
+      const res = await authApi.googleAuth(credential);
+      if (res.status === 200 || res.status === 201) {
+        setUser(res.data.user);
+        saveToken(res.data.token);
+        return { success: true };
+      }
+      return { success: false, error: res.message || 'Google sign-in failed' };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    setUser(null);
+    clearToken();
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{
+      user, staffLogin, patientLogin, patientRegister, googleAuth, logout,
+      isAuthenticated: !!user, isLoading
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}
