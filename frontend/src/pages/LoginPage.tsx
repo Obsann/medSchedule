@@ -76,8 +76,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       let result;
 
       if (isLoginView) {
-        // Automatically route to staff or patient auth based on domain
-        const isStaff = identifier.toLowerCase().trim().endsWith('@medschedule.et');
+        // Automatically route to staff or patient auth based on whether it looks like an email
+        const isStaff = identifier.trim().includes('@');
         if (isStaff) {
           result = await staffLogin(identifier.trim(), password);
         } else {
@@ -143,7 +143,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 <Shield className="w-6 h-6 text-blue-200" />
                 <div>
                   <h3 className="font-semibold">For Staff & Admins</h3>
-                  <p className="text-sm text-blue-200">Log in using your email</p>
+                  <p className="text-sm text-blue-200">Log in using your email and password</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">

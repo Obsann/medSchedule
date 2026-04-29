@@ -4,6 +4,7 @@ import {
   staffApi, departmentsApi, shiftsApi,
   getSavedToken, decodeToken,
 } from '../api';
+import { useAuth } from './AuthContext';
 
 interface DataContextType {
   departments: Department[];
@@ -12,7 +13,6 @@ interface DataContextType {
   toasts: ToastMessage[];
   isLoading: boolean;
   error: string | null;
-  refetch: () => void;
   addToast: (message: string, type: ToastMessage['type']) => void;
   removeToast: (id: string) => void;
   // Departments
@@ -20,7 +20,7 @@ interface DataContextType {
   updateDepartment: (dept: Department) => Promise<void>;
   deleteDepartment: (id: string) => Promise<void>;
   // Staff
-  addStaff: (s: Omit<Staff, 'id'>) => Promise<void>;
+  addStaff: (s: Omit<Staff, 'id'> & { password?: string }) => Promise<void>;
   updateStaff: (s: Staff) => Promise<void>;
   deleteStaff: (id: string) => Promise<void>;
   // Shifts
@@ -42,7 +42,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [fetchKey, setFetchKey] = useState(0);
+  const { isAuthenticated } = useAuth();
 
   // ─── Toast helpers ────────────────────────────────────────────────────────
   const addToast = useCallback((message: string, type: ToastMessage['type']) => {
@@ -81,9 +81,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast]);
 
-  // Fetch on mount and when fetchKey changes
-  useEffect(() => { fetchData(); }, [fetchData, fetchKey]);
-  const refetch = useCallback(() => setFetchKey(k => k + 1), []);
+  // Fetch data when authenticated state changes
+  useEffect(() => { 
+    if (isAuthenticated) {
+      fetchData(); 
+    } else {
+      setDepartments([]);
+      setStaff([]);
+      setShifts([]);
+      setIsLoading(false);
+    }
+  }, [fetchData, isAuthenticated]);
 
   // ─── Departments ──────────────────────────────────────────────────────────
   const addDepartment = useCallback(async (dept: Omit<Department, 'id'>) => {
@@ -124,7 +132,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [addToast]);
 
   // ─── Staff ────────────────────────────────────────────────────────────────
-  const addStaff = useCallback(async (s: Omit<Staff, 'id'>) => {
+  const addStaff = useCallback(async (s: Omit<Staff, 'id'> & { password?: string }) => {
     const token = getSavedToken();
     if (!token) return;
     const res = await staffApi.create(token, s);
@@ -215,7 +223,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataContext.Provider value={{
-      departments, staff, shifts, toasts, isLoading, error, refetch,
+      departments, staff, shifts, toasts, isLoading, error,
       addToast, removeToast,
       addDepartment, updateDepartment, deleteDepartment,
       addStaff, updateStaff, deleteStaff,

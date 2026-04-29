@@ -150,7 +150,7 @@ export const staffApi = {
     });
   },
 
-  async create(token: string, data: Omit<Staff, 'id'>): Promise<ApiResponse<Staff>> {
+  async create(token: string, data: Omit<Staff, 'id'> & { password?: string }): Promise<ApiResponse<Staff>> {
     return fetchApi<Staff>('/staff', {
       method: 'POST',
       body: JSON.stringify(data),

@@ -506,7 +506,7 @@ function StaffDashboard({ onNavigate, staffId, shifts, staffList, getDepartmentN
               <button onClick={() => onNavigate('my-shifts')} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-teal-50 text-teal-700 text-sm font-medium hover:bg-teal-100 transition-colors border border-teal-200">
                 <CalendarDays className="w-4 h-4" /> View All My Shifts
               </button>
-              <button onClick={() => onNavigate('profile')} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors border border-blue-200">
+              <button onClick={() => onNavigate('staff-profile')} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100 transition-colors border border-blue-200">
                 <UserCheck className="w-4 h-4" /> Update Profile
               </button>
               <button onClick={() => onNavigate('schedule')} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-purple-50 text-purple-700 text-sm font-medium hover:bg-purple-100 transition-colors border border-purple-200">

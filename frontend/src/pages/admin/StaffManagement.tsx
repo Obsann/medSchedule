@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import type { Staff, StaffRole } from '../../types';
-import { Search, Plus, Edit2, Trash2, X, UserCheck, Stethoscope, Filter } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, UserCheck, Stethoscope, Filter, Eye, EyeOff } from 'lucide-react';
 import { validateEthiopianPhone } from '../../utils/phoneValidation';
 
 export default function StaffManagement() {
@@ -14,9 +14,10 @@ export default function StaffManagement() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', phone: '',
+    firstName: '', lastName: '', email: '', phone: '', password: '',
     role: 'doctor' as StaffRole, departmentId: '', specialization: '', status: 'active' as 'active' | 'on-leave' | 'inactive',
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   const filteredStaff = staff.filter(s => {
     const matchesSearch = `${s.firstName} ${s.lastName} ${s.email} ${s.specialization}`.toLowerCase().includes(search.toLowerCase());
@@ -27,7 +28,8 @@ export default function StaffManagement() {
 
   const openAdd = () => {
     setEditingStaff(null);
-    setForm({ firstName: '', lastName: '', email: '', phone: '', role: 'doctor', departmentId: departments[0]?.id || '', specialization: '', status: 'active' });
+    setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', role: 'doctor', departmentId: departments[0]?.id || '', specialization: '', status: 'active' });
+    setShowPassword(false);
     setShowModal(true);
   };
 
@@ -52,9 +54,10 @@ export default function StaffManagement() {
 
     try {
       if (editingStaff) {
-        await updateStaff({ ...editingStaff, ...form });
+        const { password, ...updateData } = form;
+        await updateStaff({ ...editingStaff, ...updateData });
       } else {
-        await addStaff(form);
+        await addStaff(form as any);
       }
       setShowModal(false);
     } catch {
@@ -213,6 +216,26 @@ export default function StaffManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                 <input required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
               </div>
+              {!editingStaff && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <div className="relative">
+                    <input
+                      required
+                      type={showPassword ? 'text' : 'password'}
+                      value={form.password}
+                      onChange={e => setForm({ ...form, password: e.target.value })}
+                      minLength={6}
+                      placeholder="Min 6 characters"
+                      className="w-full px-3 py-2.5 pr-10 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Staff will use this password with their email to log in</p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>

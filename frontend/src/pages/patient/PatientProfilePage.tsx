@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useData } from '../../context/DataContext';
+
 import { profileApi, getSavedToken, getFullPhotoUrl } from '../../api';
 import {
   User, Mail, Phone, Calendar, Shield, Heart, AlertCircle,
@@ -37,7 +37,7 @@ const genderOptions = ['Male', 'Female', 'Other', 'Unknown'] as const;
 // ═════════════════════════════════════════════════════════════════════════════════
 export default function PatientProfilePage() {
   const { updateUserPhoto, updateUserName } = useAuth();
-  const { refetch } = useData();
+
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -126,7 +126,6 @@ export default function PatientProfilePage() {
         setIsEditing(false);
         setSaveSuccess(true);
         if (res.data.name) updateUserName(res.data.name);
-        refetch();
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
         setError(res.message || 'Failed to save profile');

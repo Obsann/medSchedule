@@ -52,14 +52,7 @@ router.post('/staff-login', async (req, res) => {
       });
     }
 
-    // Validate domain
     const emailLower = email.toLowerCase().trim();
-    if (!emailLower.endsWith(`@${STAFF_DOMAIN.toLowerCase()}`)) {
-      return res.status(401).json({
-        status: 401,
-        message: `Invalid credentials. Staff must use an @${STAFF_DOMAIN} email.`,
-      });
-    }
 
     // Find user by email (include password for comparison)
     const user = await User.findOne({

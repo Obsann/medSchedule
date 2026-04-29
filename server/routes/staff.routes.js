@@ -1,6 +1,7 @@
 const express = require('express');
 const Staff = require('../models/Staff');
 const Shift = require('../models/Shift');
+const User = require('../models/User');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
@@ -80,7 +81,7 @@ router.get('/:id', async (req, res) => {
 // ─── POST /api/staff ─────────────────────────────────────────────────────────
 router.post('/', requireRole('admin'), async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, role, departmentId, specialization, status } = req.body;
+    const { firstName, lastName, email, phone, role, departmentId, specialization, status, password } = req.body;
 
     if (!firstName || !lastName || !email) {
       return res.status(422).json({
@@ -89,7 +90,14 @@ router.post('/', requireRole('admin'), async (req, res) => {
       });
     }
 
-    // Check unique email
+    if (!password || password.length < 6) {
+      return res.status(422).json({
+        status: 422,
+        message: 'Password is required and must be at least 6 characters',
+      });
+    }
+
+    // Check unique email in Staff collection
     const existing = await Staff.findOne({ email: email.toLowerCase() });
     if (existing) {
       return res.status(409).json({
@@ -98,9 +106,31 @@ router.post('/', requireRole('admin'), async (req, res) => {
       });
     }
 
+    // Also check User collection for duplicate email
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(409).json({
+        status: 409,
+        message: 'Conflict: An account with this email already exists',
+      });
+    }
+
+    // Create the Staff record
     const item = await Staff.create({
       firstName, lastName, email, phone, role, departmentId, specialization,
       status: status || 'active',
+    });
+
+    // Create a User account so the staff member can log in
+    const username = email.toLowerCase().trim();
+    await User.create({
+      username,
+      email: email.toLowerCase().trim(),
+      password,
+      name: `${firstName} ${lastName}`,
+      role: 'staff',
+      staffId: item._id,
+      authProvider: 'local',
     });
 
     res.status(201).json({
@@ -116,7 +146,7 @@ router.post('/', requireRole('admin'), async (req, res) => {
         specialization: item.specialization,
         status: item.status,
       },
-      message: `${role === 'doctor' ? 'Dr.' : 'Nurse'} ${firstName} ${lastName} created`,
+      message: `${role === 'doctor' ? 'Dr.' : 'Nurse'} ${firstName} ${lastName} created with login access`,
     });
   } catch (error) {
     console.error('Create staff error:', error);
@@ -167,6 +197,8 @@ router.delete('/:id', requireRole('admin'), async (req, res) => {
 
     // Cascade: remove all shifts for this staff member
     await Shift.deleteMany({ staffId: item._id });
+    // Cascade: remove the linked User account
+    await User.deleteMany({ staffId: item._id });
     await Staff.findByIdAndDelete(req.params.id);
 
     res.json({

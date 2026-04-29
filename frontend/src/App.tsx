@@ -16,15 +16,14 @@ import { Activity } from 'lucide-react';
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
-  const { isLoading, error, refetch } = useData();
+  const { isLoading, error } = useData();
   const [currentPage, setCurrentPage] = useState('dashboard');
 
   useEffect(() => {
     if (isAuthenticated) {
       setCurrentPage('dashboard');
-      refetch();
     }
-  }, [isAuthenticated, refetch]);
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <LoginPage onLogin={() => setCurrentPage('dashboard')} />;
@@ -59,7 +58,7 @@ function AppContent() {
           <h2 className="text-xl font-bold text-gray-900 mb-2">Connection Error</h2>
           <p className="text-sm text-gray-600 mb-6">{error}</p>
           <button
-            onClick={refetch}
+            onClick={() => window.location.reload()}
             className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
           >
             Retry Connection

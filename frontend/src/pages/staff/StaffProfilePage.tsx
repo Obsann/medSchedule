@@ -20,7 +20,7 @@ function formatDate(dateString: string): string {
 
 export default function StaffProfilePage() {
   const { updateUserPhoto, updateUserName } = useAuth();
-  const { getDepartmentName, refetch } = useData();
+  const { getDepartmentName } = useData();
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -91,7 +91,6 @@ export default function StaffProfilePage() {
         setIsEditing(false);
         setSaveSuccess(true);
         if (res.data.name) updateUserName(res.data.name);
-        refetch();
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
         setError(res.message || 'Failed to save profile');
@@ -162,9 +161,25 @@ export default function StaffProfilePage() {
   const staffData = profile.staff || {};
   const isAdmin = profile.role === 'admin';
   const gradientFrom = isAdmin ? 'from-blue-600 via-blue-700 to-indigo-800' : 'from-teal-600 via-teal-700 to-emerald-800';
-  const accentColor = isAdmin ? 'blue' : 'teal';
   const initials = profile.name?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || '?';
   const photoSrc = getFullPhotoUrl(profile.photoUrl);
+
+  // Static color map — Tailwind purges dynamic class interpolation like `text-${color}-400`
+  const accent = isAdmin
+    ? {
+        icon: 'text-blue-400',
+        iconBg: 'bg-blue-100',
+        iconText: 'text-blue-600',
+        gradient: 'from-blue-500 to-indigo-600',
+        editBtn: 'text-blue-700 bg-blue-50 hover:bg-blue-100 border-blue-200',
+      }
+    : {
+        icon: 'text-teal-400',
+        iconBg: 'bg-teal-100',
+        iconText: 'text-teal-600',
+        gradient: 'from-teal-500 to-emerald-600',
+        editBtn: 'text-teal-700 bg-teal-50 hover:bg-teal-100 border-teal-200',
+      };
 
   const statusConfig: Record<string, { bg: string; text: string; dot: string }> = {
     active:    { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
@@ -225,7 +240,7 @@ export default function StaffProfilePage() {
               {photoSrc ? (
                 <img src={photoSrc} alt={profile.name} className="w-32 h-32 rounded-2xl object-cover border-4 border-white shadow-xl" />
               ) : (
-                <div className={`w-32 h-32 rounded-2xl bg-gradient-to-br ${isAdmin ? 'from-blue-500 to-indigo-600' : 'from-teal-500 to-emerald-600'} border-4 border-white shadow-xl flex items-center justify-center text-white text-4xl font-bold`}>
+                <div className={`w-32 h-32 rounded-2xl bg-gradient-to-br ${accent.gradient} border-4 border-white shadow-xl flex items-center justify-center text-white text-4xl font-bold`}>
                   {initials}
                 </div>
               )}
@@ -246,19 +261,19 @@ export default function StaffProfilePage() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2 text-sm text-gray-500">
                 {staffData.specialization && (
                   <span className="flex items-center gap-1.5">
-                    <Stethoscope className={`w-4 h-4 text-${accentColor}-400`} />
+                    <Stethoscope className={`w-4 h-4 ${accent.icon}`} />
                     {staffData.specialization}
                   </span>
                 )}
                 {staffData.departmentId && (
                   <span className="flex items-center gap-1.5">
-                    <Building2 className={`w-4 h-4 text-${accentColor}-400`} />
+                    <Building2 className={`w-4 h-4 ${accent.icon}`} />
                     {getDepartmentName(staffData.departmentId)}
                   </span>
                 )}
                 {profile.email && (
                   <span className="flex items-center gap-1.5">
-                    <Mail className={`w-4 h-4 text-${accentColor}-400`} />
+                    <Mail className={`w-4 h-4 ${accent.icon}`} />
                     {profile.email}
                   </span>
                 )}
@@ -277,7 +292,7 @@ export default function StaffProfilePage() {
                   </button>
                 </>
               ) : (
-                <button onClick={() => setIsEditing(true)} className={`px-5 py-2.5 rounded-xl text-sm font-medium text-${accentColor}-700 bg-${accentColor}-50 hover:bg-${accentColor}-100 border border-${accentColor}-200 flex items-center gap-1.5 transition-colors`}>
+                <button onClick={() => setIsEditing(true)} className={`px-5 py-2.5 rounded-xl text-sm font-medium ${accent.editBtn} border flex items-center gap-1.5 transition-colors`}>
                   <Edit3 className="w-4 h-4" /> Edit Profile
                 </button>
               )}
@@ -292,8 +307,8 @@ export default function StaffProfilePage() {
         {/* Personal Info */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-lg bg-${accentColor}-100 flex items-center justify-center`}>
-              <User className={`w-4 h-4 text-${accentColor}-600`} />
+            <div className={`w-8 h-8 rounded-lg ${accent.iconBg} flex items-center justify-center`}>
+              <User className={`w-4 h-4 ${accent.iconText}`} />
             </div>
             <h3 className="font-semibold text-gray-900">Personal Information</h3>
           </div>
