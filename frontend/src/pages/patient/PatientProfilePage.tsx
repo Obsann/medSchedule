@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { profileApi, getSavedToken, getFullPhotoUrl } from '../../api';
 import {
   User, Mail, Phone, Calendar, Shield, Heart, AlertCircle,
