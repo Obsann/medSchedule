@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { getFullPhotoUrl } from '../api';
 import {
   LayoutDashboard, Users, CalendarDays, Building2, Clock, UserCheck, LogOut, Menu, X,
   CheckCircle, AlertCircle, Info, AlertTriangle, Stethoscope, Activity
@@ -10,6 +11,24 @@ interface LayoutProps {
   children: ReactNode;
   currentPage: string;
   onNavigate: (page: string) => void;
+}
+
+// ─── Avatar Component ────────────────────────────────────────────────────────
+function Avatar({ photoUrl, name, size = 'md', className = '' }: {
+  photoUrl?: string; name?: string; size?: 'sm' | 'md' | 'lg'; className?: string;
+}) {
+  const sizeClasses = { sm: 'w-8 h-8 text-xs', md: 'w-10 h-10 text-sm', lg: 'w-12 h-12 text-base' };
+  const src = getFullPhotoUrl(photoUrl);
+  const initials = name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?';
+
+  if (src) {
+    return <img src={src} alt={name || ''} className={`${sizeClasses[size]} rounded-full object-cover ${className}`} />;
+  }
+  return (
+    <div className={`${sizeClasses[size]} rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold ${className}`}>
+      {initials}
+    </div>
+  );
 }
 
 const Toast = () => {
@@ -56,17 +75,19 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
     { id: 'departments', label: 'Departments', icon: Building2 },
     { id: 'shifts', label: 'Shift Assignment', icon: CalendarDays },
     { id: 'schedule', label: 'Schedule View', icon: Clock },
+    { id: 'admin-profile', label: 'My Profile', icon: UserCheck },
   ];
 
   const staffNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'my-shifts', label: 'My Shifts', icon: CalendarDays },
-    { id: 'profile', label: 'My Profile', icon: UserCheck },
+    { id: 'staff-profile', label: 'My Profile', icon: UserCheck },
     { id: 'schedule', label: 'Schedule View', icon: Clock },
   ];
 
   const patientNav = [
     { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
+    { id: 'patient-profile', label: 'My Profile', icon: UserCheck },
     { id: 'view-schedule', label: 'View Schedule', icon: CalendarDays },
     { id: 'find-doctor', label: 'Find Doctor', icon: Stethoscope },
   ];
@@ -90,6 +111,8 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
     staff: 'Staff',
     patient: 'Patient',
   };
+
+  const photoUrl = (user as any)?.photoUrl;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -119,9 +142,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
           {/* User info */}
           <div className="bg-white/10 rounded-xl p-4 mb-6 backdrop-blur-sm">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm">
-                {user?.name?.split(' ').map(n => n[0]).join('').substring(0, 2)}
-              </div>
+              <Avatar photoUrl={photoUrl} name={user?.name} size="md" className="border-2 border-white/30" />
               <div className="flex-1 min-w-0">
                 <p className="text-white font-medium text-sm truncate">{user?.name}</p>
                 <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${roleBadgeColors[user?.role || 'patient']}`}>
@@ -184,9 +205,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
                 <p className="text-xs text-gray-500">Logged in as</p>
                 <p className="text-sm font-medium text-gray-700">{user?.name}</p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                {user?.name?.split(' ').map(n => n[0]).join('').substring(0, 2)}
-              </div>
+              <Avatar photoUrl={photoUrl} name={user?.name} size="md" />
             </div>
           </div>
         </header>

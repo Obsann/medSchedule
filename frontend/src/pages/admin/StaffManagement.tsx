@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import type { Staff, StaffRole } from '../../types';
 import { Search, Plus, Edit2, Trash2, X, UserCheck, Stethoscope, Filter } from 'lucide-react';
+import { validateEthiopianPhone } from '../../utils/phoneValidation';
 
 export default function StaffManagement() {
   const { staff, departments, addStaff, updateStaff, deleteStaff } = useData();
@@ -38,6 +39,17 @@ export default function StaffManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (form.phone) {
+      const phoneVal = validateEthiopianPhone(form.phone);
+      if (!phoneVal.valid) {
+        // Since error toast is handled by DataContext typically, we could just alert for now
+        // or add addToast from useData
+        alert(phoneVal.error || 'Invalid phone format');
+        return;
+      }
+    }
+
     try {
       if (editingStaff) {
         await updateStaff({ ...editingStaff, ...form });

@@ -1,4 +1,4 @@
-import type { User, Department, Staff, Shift } from '../types';
+import type { User, Department, Staff, Shift, PatientProfile } from '../types';
 
 // ─── API Base URL ────────────────────────────────────────────────────────────
 const API_BASE = 'http://localhost:5123/api';
@@ -256,6 +256,62 @@ export const shiftsApi = {
 export const statsApi = {
   async getDashboardStats(token: string) {
     return fetchApi<any>('/stats/dashboard', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// UNIFIED PROFILE API (all roles)
+// ═══════════════════════════════════════════════════════════════════════════════
+const SERVER_BASE = 'http://localhost:5123';
+
+export function getFullPhotoUrl(photoUrl: string | undefined | null): string {
+  if (!photoUrl) return '';
+  if (photoUrl.startsWith('http')) return photoUrl;
+  return `${SERVER_BASE}${photoUrl}`;
+}
+
+export const profileApi = {
+  async getProfile(token: string): Promise<ApiResponse<any>> {
+    return fetchApi<any>('/profile/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  },
+
+  async updateProfile(token: string, data: any): Promise<ApiResponse<any>> {
+    return fetchApi<any>('/profile/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  },
+
+  async uploadPhoto(token: string, file: File): Promise<ApiResponse<{ photoUrl: string }>> {
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    const res = await fetch(`${API_BASE}/profile/upload-photo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    return res.json();
+  },
+};
+
+// Keep old patientApi for backward compat
+export const patientApi = {
+  async getProfile(token: string): Promise<ApiResponse<PatientProfile>> {
+    return fetchApi<PatientProfile>('/patient/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  },
+
+  async updateProfile(token: string, data: Partial<PatientProfile>): Promise<ApiResponse<PatientProfile>> {
+    return fetchApi<PatientProfile>('/patient/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
       headers: { Authorization: `Bearer ${token}` }
     });
   },

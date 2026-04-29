@@ -81,6 +81,7 @@ function AdminDashboard({ onNavigate, activeStaff, doctors, nurses, onLeave, ina
   todayShiftsList: any[]; allShifts: any[]; departmentsList: any[]; staffList: any[];
   getStaffName: (id: string) => string; getDepartmentName: (id: string) => string;
 }) {
+  const { user } = useAuth();
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -114,8 +115,8 @@ function AdminDashboard({ onNavigate, activeStaff, doctors, nurses, onLeave, ina
         <div className="relative z-10">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold mb-2">Welcome back, Administrator 👋</h1>
-              <p className="text-blue-200 text-sm lg:text-base">Here's your hospital's duty schedule overview for today.</p>
+              <h1 className="text-2xl lg:text-3xl font-bold mb-2">Welcome back, {user?.name || 'Administrator'} </h1>
+              <p className="text-blue-200 text-sm lg:text-base">Here's your medSchedule duty overview for today.</p>
               <p className="text-blue-300 text-sm mt-2 font-medium">
                 📅 {format(now, 'EEEE, MMMM dd, yyyy')} · Week {format(weekStart, 'MMM dd')} – {format(addDays(weekStart, 6), 'MMM dd')}
               </p>
@@ -414,7 +415,7 @@ function StaffDashboard({ onNavigate, staffId, shifts, staffList, getDepartmentN
         <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute right-20 bottom-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2" />
         <div className="relative z-10">
-          <h1 className="text-2xl lg:text-3xl font-bold mb-2">Welcome back, {profile?.firstName || 'Staff'} 👩‍⚕️</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold mb-2">Welcome back, {profile?.firstName || 'Staff'}</h1>
           <p className="text-teal-200">{profile?.specialization || ''} · {getDepartmentName(profile?.departmentId || '')}</p>
           <p className="text-teal-300 text-sm mt-2">📅 {format(new Date(), 'EEEE, MMMM dd, yyyy')}</p>
         </div>
@@ -545,7 +546,7 @@ function StaffDashboard({ onNavigate, staffId, shifts, staffList, getDepartmentN
    PATIENT DASHBOARD
    ═══════════════════════════════════════════════════════════════════════════════ */
 function PatientDashboard({ onNavigate }: { onNavigate: (page: string) => void }) {
-  const { departments, shifts, staff, getStaffName } = useData();
+  const { departments, shifts, staff, getStaffName, addToast } = useData();
   const today = format(new Date(), 'yyyy-MM-dd');
   const todayScheduled = shifts.filter(s => s.date === today && s.status === 'scheduled');
   const todayDoctorsOnDuty = [...new Set(todayScheduled.filter(s => {
@@ -574,7 +575,7 @@ function PatientDashboard({ onNavigate }: { onNavigate: (page: string) => void }
         <div className="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute left-1/3 bottom-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2" />
         <div className="relative z-10">
-          <h1 className="text-2xl lg:text-3xl font-bold mb-2">Welcome to Jimma Hospital 🏥</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold mb-2">Welcome to medSchedule</h1>
           <p className="text-purple-200">Find available doctors and nurses. View today's duty schedule.</p>
           <p className="text-purple-300 text-sm mt-2 font-medium">📅 {format(new Date(), 'EEEE, MMMM dd, yyyy')} · {currentlyOnDuty.length} staff currently on duty</p>
         </div>
@@ -647,7 +648,17 @@ function PatientDashboard({ onNavigate }: { onNavigate: (page: string) => void }
                     <p className="text-xs text-gray-500">{staffMember?.specialization}</p>
                     <p className="text-[11px] text-gray-400">{shift.startTime} – {shift.endTime} · {departments.find(d => d.id === shift.departmentId)?.name}</p>
                   </div>
-                  <button className="p-2 rounded-lg hover:bg-green-50 text-green-600" title="Available now">
+                  <button 
+                    onClick={() => {
+                      if (staffMember?.phone) {
+                        navigator.clipboard.writeText(staffMember.phone);
+                        addToast(`Copied ${staffMember.phone} to clipboard`, 'success');
+                      } else {
+                        addToast('No phone number available', 'error');
+                      }
+                    }}
+                    className="p-2 rounded-lg hover:bg-green-50 text-green-600" title="Available now"
+                  >
                     <PhoneCall className="w-4 h-4" />
                   </button>
                 </div>

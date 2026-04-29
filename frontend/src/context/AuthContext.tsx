@@ -3,12 +3,14 @@ import type { User } from '../types';
 import { authApi, saveToken, getSavedToken, clearToken, decodeToken } from '../api';
 
 interface AuthContextType {
-  user: Omit<User, 'password'> | null;
+  user: Omit<User, 'password'> & { photoUrl?: string; email?: string } | null;
   staffLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   patientLogin: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   patientRegister: (username: string, password: string, name: string, email?: string) => Promise<{ success: boolean; error?: string }>;
   googleAuth: (credential: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  updateUserPhoto: (photoUrl: string) => void;
+  updateUserName: (name: string) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -16,7 +18,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Omit<User, 'password'> | null>(() => {
+  const [user, setUser] = useState<AuthContextType['user']>(() => {
     const token = getSavedToken();
     if (token) {
       const { valid, payload } = decodeToken(token);
@@ -105,9 +107,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearToken();
   }, []);
 
+  const updateUserPhoto = useCallback((photoUrl: string) => {
+    setUser(prev => prev ? { ...prev, photoUrl } : prev);
+  }, []);
+
+  const updateUserName = useCallback((name: string) => {
+    setUser(prev => prev ? { ...prev, name } : prev);
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       user, staffLogin, patientLogin, patientRegister, googleAuth, logout,
+      updateUserPhoto, updateUserName,
       isAuthenticated: !!user, isLoading
     }}>
       {children}

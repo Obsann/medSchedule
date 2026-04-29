@@ -11,6 +11,7 @@ export interface User {
   role: UserRole;
   name: string;
   staffId?: string;
+  patientId?: string;
 }
 
 export interface Department {
@@ -49,4 +50,22 @@ export interface ToastMessage {
   id: string;
   message: string;
   type: 'success' | 'error' | 'info' | 'warning';
+}
+
+export interface PatientProfile {
+  _id: string;
+  userId: string;
+  mrn: string;
+  dob: string;
+  gender: 'Male' | 'Female' | 'Other' | 'Unknown';
+  phone: string;
+  emergencyContact: {
+    name: string;
+    phone: string;
+    relation: string;
+  };
+  photoUrl: string;
+  status: 'In-patient' | 'Out-patient' | 'Discharged';
+  createdAt: string;
+  updatedAt: string;
 }

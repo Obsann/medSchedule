@@ -11,11 +11,12 @@ const User = require('./models/User');
 const Department = require('./models/Department');
 const Staff = require('./models/Staff');
 const Shift = require('./models/Shift');
+const Patient = require('./models/Patient');
 
 async function seed() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
+    console.log('Connected to MongoDB');
 
     // Clear existing data
     await Promise.all([
@@ -23,8 +24,9 @@ async function seed() {
       Department.deleteMany({}),
       Staff.deleteMany({}),
       Shift.deleteMany({}),
+      Patient.deleteMany({}),
     ]);
-    console.log('🗑️  Cleared existing data');
+    console.log('Cleared existing data');
 
     // ── Seed Departments ──────────────────────────────────────────────────────
     const deptData = [
@@ -97,7 +99,7 @@ async function seed() {
     ];
 
     const staffMembers = await Staff.insertMany(staffData);
-    console.log(`👨‍⚕️ Seeded ${staffMembers.length} staff members`);
+    console.log(` Seeded ${staffMembers.length} staff members`);
 
     // Create staffName -> ObjectId lookup
     const staffMap = {};
@@ -113,9 +115,17 @@ async function seed() {
 
     // ── Seed Users ────────────────────────────────────────────────────────────
     // Users are created one-by-one so the bcrypt pre-save hook runs
+    // Create an admin Staff record so profile editing works
+    const adminStaff = await Staff.create({
+      firstName: 'System', lastName: 'Administrator',
+      email: 'admin@medschedule.et', phone: '+251 911 000 000',
+      role: 'doctor', departmentId: deptMap['General Medicine'],
+      specialization: 'Hospital Administration', status: 'active',
+    });
+
     const usersData = [
       // Admin — uses domain email for login
-      { username: 'admin', email: 'admin@medSchedule.et', password: 'admin123', role: 'admin', name: 'System Administrator', staffId: null, authProvider: 'local' },
+      { username: 'admin', email: 'admin@medSchedule.et', password: 'admin123', role: 'admin', name: 'System Administrator', staffId: adminStaff._id, authProvider: 'local' },
       // Staff — each has their domain email for login
       { username: 'drabebe', email: 'abebe.kebede@medSchedule.et', password: 'staff123', role: 'staff', name: 'Dr. Abebe Kebede', staffId: staffMap['Abebe Kebede'], authProvider: 'local' },
       { username: 'drsarah', email: 'sarah.johnson@medSchedule.et', password: 'staff123', role: 'staff', name: 'Dr. Sarah Johnson', staffId: staffMap['Sarah Johnson'], authProvider: 'local' },
@@ -127,10 +137,33 @@ async function seed() {
       { username: 'patient1', email: 'amanuel@gmail.com', password: 'patient123', role: 'patient', name: 'Amanuel Girma', staffId: null, authProvider: 'local' },
     ];
 
+    const createdUsers = [];
     for (const u of usersData) {
-      await User.create(u);
+      const created = await User.create(u);
+      createdUsers.push(created);
     }
-    console.log(`👤 Seeded ${usersData.length} users`);
+    console.log(`Seeded ${usersData.length} users`);
+
+    // Create Patient profiles for patient users
+    const patientUsers = createdUsers.filter(u => u.role === 'patient');
+    for (const pu of patientUsers) {
+      const patient = await Patient.create({
+        userId: pu._id,
+        mrn: 'MRN-' + Math.floor(100000 + Math.random() * 900000).toString(),
+        dob: '1995-03-15',
+        gender: 'Male',
+        phone: '+251 912 345 678',
+        emergencyContact: {
+          name: 'Tigist Girma',
+          phone: '+251 911 234 567',
+          relation: 'Spouse',
+        },
+        status: 'Out-patient',
+      });
+      pu.patientId = patient._id;
+      await pu.save();
+    }
+    console.log(`Seeded ${patientUsers.length} patient profiles`);
 
     // ── Seed Shifts (4 weeks) ─────────────────────────────────────────────────
     const today = new Date();
@@ -241,9 +274,9 @@ async function seed() {
     }
 
     await Shift.insertMany(shiftsToInsert);
-    console.log(`📅 Seeded ${shiftsToInsert.length} shifts`);
+    console.log(` Seeded ${shiftsToInsert.length} shifts`);
 
-    console.log('\n✅ Database seeded successfully!');
+    console.log('\n Database seeded successfully!');
     console.log('\n── Login Credentials ──────────────────────────');
     console.log('STAFF PORTAL (use domain email):');
     console.log('  Admin:    admin@medSchedule.et / admin123');
@@ -257,7 +290,7 @@ async function seed() {
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Seed error:', error);
+    console.error(' Seed error:', error);
     process.exit(1);
   }
 }

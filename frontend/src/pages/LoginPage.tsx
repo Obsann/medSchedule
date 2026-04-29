@@ -8,16 +8,16 @@ interface LoginPageProps {
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const { staffLogin, patientLogin, patientRegister, googleAuth } = useAuth();
-  
+
   const [isLoginView, setIsLoginView] = useState(true); // true = login, false = register
-  
+
   // Form state
   const [identifier, setIdentifier] = useState(''); // Used for Login (Email or Username)
   const [username, setUsername] = useState(''); // Used for Register
   const [email, setEmail] = useState(''); // Used for Register
   const [password, setPassword] = useState('');
   const [name, setName] = useState(''); // Used for Register
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -25,18 +25,34 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
   // Initialize Google Sign-In
   useEffect(() => {
-    if (isLoginView && window.google) {
-      window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID_HERE',
-        callback: handleGoogleCredentialResponse
-      });
-      if (googleButtonContainerRef.current) {
-        window.google.accounts.id.renderButton(
-          googleButtonContainerRef.current,
-          { theme: 'outline', size: 'large', text: 'continue_with', width: '100%' }
-        );
+    let intervalId: ReturnType<typeof setInterval>;
+
+    const initGoogle = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID_HERE',
+          callback: handleGoogleCredentialResponse
+        });
+        if (googleButtonContainerRef.current) {
+          window.google.accounts.id.renderButton(
+            googleButtonContainerRef.current,
+            { theme: 'outline', size: 'large', text: 'continue_with', width: '100%' }
+          );
+        }
+        if (intervalId) clearInterval(intervalId);
       }
+    };
+
+    initGoogle();
+
+    // Fallback if not loaded yet
+    if (!window.google) {
+      intervalId = setInterval(initGoogle, 100);
     }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [isLoginView]);
 
   const handleGoogleCredentialResponse = async (response: any) => {
@@ -58,7 +74,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
     try {
       let result;
-      
+
       if (isLoginView) {
         // Automatically route to staff or patient auth based on domain
         const isStaff = identifier.toLowerCase().trim().endsWith('@medschedule.et');
@@ -107,27 +123,27 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       </div>
 
       <div className="w-full max-w-5xl grid lg:grid-cols-2 gap-0 relative z-10 animate-fade-scale shadow-2xl rounded-3xl overflow-hidden bg-white">
-        
+
         {/* Left Side: Branding & Info */}
         <div className="hidden lg:flex flex-col justify-center p-12 bg-gradient-to-br from-blue-600 to-indigo-800 text-white relative">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-          
+
           <div className="relative z-10">
             <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-white/20 shadow-xl">
               <Heart className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-4xl font-bold mb-4 tracking-tight">MedSchedule</h1>
             <p className="text-blue-100 text-lg leading-relaxed mb-8">
-              A unified platform for healthcare professionals and patients. 
+              A unified platform for healthcare professionals and patients.
               Manage schedules, book appointments, and coordinate care seamlessly.
             </p>
-            
+
             <div className="space-y-4">
               <div className="flex items-center gap-3 bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
                 <Shield className="w-6 h-6 text-blue-200" />
                 <div>
                   <h3 className="font-semibold">For Staff & Admins</h3>
-                  <p className="text-sm text-blue-200">Log in using your @medSchedule.et email</p>
+                  <p className="text-sm text-blue-200">Log in using your email</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 bg-white/10 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
@@ -148,8 +164,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               {isLoginView ? 'Welcome Back' : 'Create Account'}
             </h2>
             <p className="text-gray-500">
-              {isLoginView 
-                ? 'Sign in to access your dashboard' 
+              {isLoginView
+                ? 'Sign in to access your dashboard'
                 : 'Join MedSchedule to manage your healthcare'}
             </p>
           </div>
@@ -162,7 +178,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                   <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900" placeholder="Amanuel Girma" required />
                 </div>
-                
+
                 <div className="animate-fade-up" style={{ animationDelay: '0.1s' }}>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Email Address (Optional)</label>
                   <div className="relative">
@@ -224,19 +240,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </button>
           </form>
 
-          {/* Google OAuth (Login Only) */}
-          {isLoginView && (
-            <div className="mt-6 animate-fade-up" style={{ animationDelay: '0.3s' }}>
-              <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-gray-200"></div>
-                <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">Or</span>
-                <div className="flex-grow border-t border-gray-200"></div>
-              </div>
-              <div className="mt-4 flex justify-center w-full">
-                <div ref={googleButtonContainerRef} className="w-full flex justify-center"></div>
-              </div>
+          {/* Google OAuth */}
+          <div className="mt-6 animate-fade-up" style={{ animationDelay: '0.3s' }}>
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-gray-200"></div>
+              <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">Or</span>
+              <div className="flex-grow border-t border-gray-200"></div>
             </div>
-          )}
+            <div className="mt-4 flex justify-center w-full">
+              <div ref={googleButtonContainerRef} className="w-full flex justify-center"></div>
+            </div>
+          </div>
 
           {/* Toggle View */}
           <div className="mt-8 text-center text-sm text-gray-600 animate-fade-up" style={{ animationDelay: isLoginView ? '0.4s' : '0.5s' }}>
@@ -246,17 +260,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </button>
           </div>
 
-          {/* Demo Info */}
-          {isLoginView && (
-            <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col gap-2 animate-fade-up" style={{ animationDelay: '0.5s' }}>
-              <p className="text-xs text-gray-400 text-center font-semibold tracking-wider uppercase">Demo Accounts</p>
-              <div className="flex justify-center gap-4 text-xs text-gray-500">
-                <span>Staff: <code className="bg-gray-100 px-1 py-0.5 rounded">drabebe@medschedule.et</code></span>
-                <span>Patient: <code className="bg-gray-100 px-1 py-0.5 rounded">patient1</code></span>
-                <span>Pass: <code className="bg-gray-100 px-1 py-0.5 rounded">...123</code></span>
-              </div>
-            </div>
-          )}
+
 
         </div>
       </div>

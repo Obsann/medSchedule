@@ -36,6 +36,11 @@ const userSchema = new mongoose.Schema({
     ref: 'Staff',
     default: null,
   },
+  patientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Patient',
+    default: null,
+  },
   googleId: {
     type: String,
     default: null,
@@ -45,6 +50,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['local', 'google'],
     default: 'local',
+  },
+  photoUrl: {
+    type: String,
+    default: '',
   },
 }, { timestamps: true });
 

@@ -3,11 +3,17 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const Staff = require('../models/Staff');
+const Patient = require('../models/Patient');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
 const STAFF_DOMAIN = process.env.STAFF_EMAIL_DOMAIN || 'medSchedule.et';
+
+// Helper: generate MRN
+function generateMRN() {
+  return 'MRN-' + Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 // Helper: generate JWT
 function signToken(user) {
@@ -27,6 +33,8 @@ function formatUser(user) {
     role: user.role,
     name: user.name,
     staffId: user.staffId || null,
+    patientId: user.patientId || null,
+    photoUrl: user.photoUrl || '',
   };
 }
 
@@ -198,6 +206,14 @@ router.post('/patient/register', async (req, res) => {
       authProvider: 'local',
     });
 
+    const patient = await Patient.create({
+      userId: user._id,
+      mrn: generateMRN(),
+    });
+
+    user.patientId = patient._id;
+    await user.save();
+
     const token = signToken(user);
 
     res.status(201).json({
@@ -282,6 +298,15 @@ router.post('/google', async (req, res) => {
         googleId,
         authProvider: 'google',
       });
+
+      const patient = await Patient.create({
+        userId: user._id,
+        mrn: generateMRN(),
+        photoUrl: picture || '',
+      });
+
+      user.patientId = patient._id;
+      await user.save();
     }
 
     const token = signToken(user);

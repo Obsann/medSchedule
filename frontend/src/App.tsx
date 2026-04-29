@@ -10,6 +10,8 @@ import ShiftManagement from './pages/admin/ShiftManagement';
 import ScheduleView from './pages/ScheduleView';
 import { MyShifts, ProfilePage } from './pages/staff/StaffPages';
 import { PatientScheduleViewer, FindDoctor } from './pages/patient/PatientPages';
+import PatientProfilePage from './pages/patient/PatientProfilePage';
+import StaffProfilePage from './pages/staff/StaffProfilePage';
 import { Activity } from 'lucide-react';
 
 function AppContent() {
@@ -18,8 +20,11 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
 
   useEffect(() => {
-    if (isAuthenticated) setCurrentPage('dashboard');
-  }, [isAuthenticated]);
+    if (isAuthenticated) {
+      setCurrentPage('dashboard');
+      refetch();
+    }
+  }, [isAuthenticated, refetch]);
 
   if (!isAuthenticated) {
     return <LoginPage onLogin={() => setCurrentPage('dashboard')} />;
@@ -82,6 +87,9 @@ function PageRouter({ page, onNavigate }: { page: string; onNavigate: (p: string
     case 'profile': return <ProfilePage />;
     case 'view-schedule': return <PatientScheduleViewer />;
     case 'find-doctor': return <FindDoctor />;
+    case 'patient-profile': return <PatientProfilePage />;
+    case 'staff-profile': return <StaffProfilePage />;
+    case 'admin-profile': return <StaffProfilePage />;
     default: return <DashboardPage onNavigate={onNavigate} />;
   }
 }

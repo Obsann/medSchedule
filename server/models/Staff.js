@@ -21,6 +21,13 @@ const staffSchema = new mongoose.Schema({
   phone: {
     type: String,
     default: '',
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return /^(09\d{8}|07\d{8}|\+251(9|7)\d{8})$/.test(v.replace(/\s+/g, ''));
+      },
+      message: props => `${props.value} is not a valid Ethiopian phone number!`
+    }
   },
   role: {
     type: String,
