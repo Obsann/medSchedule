@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Staff = require('../models/Staff');
 const Patient = require('../models/Patient');
 const { authenticate } = require('../middleware/auth');
+const sendEmail = require('../utils/sendEmail');
 
 const router = express.Router();
 
@@ -129,6 +130,15 @@ router.post('/patient/login', async (req, res) => {
       });
     }
 
+    // Check if email is verified
+    if (user.isEmailVerified === false && user.email) {
+      return res.status(403).json({
+        status: 403,
+        message: 'Please verify your email address to log in.',
+        data: { needsVerification: true, email: user.email }
+      });
+    }
+
     const token = signToken(user);
 
     res.json({
@@ -148,10 +158,10 @@ router.post('/patient/register', async (req, res) => {
   try {
     const { username, password, name, email } = req.body;
 
-    if (!username || !password || !name) {
+    if (!username || !password || !name || !email) {
       return res.status(400).json({
         status: 400,
-        message: 'Username, password, and name are required',
+        message: 'Username, password, name, and email are required',
       });
     }
 
@@ -190,13 +200,20 @@ router.post('/patient/register', async (req, res) => {
       }
     }
 
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
     const user = await User.create({
       username: username.toLowerCase().trim(),
-      email: email ? email.toLowerCase().trim() : null,
+      email: email.toLowerCase().trim(),
       password,
       name: name.trim(),
       role: 'patient',
       authProvider: 'local',
+      isEmailVerified: false,
+      otp,
+      otpExpires,
     });
 
     const patient = await Patient.create({
@@ -207,15 +224,137 @@ router.post('/patient/register', async (req, res) => {
     user.patientId = patient._id;
     await user.save();
 
-    const token = signToken(user);
+    // Send the OTP via email
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #2563eb; margin-bottom: 20px;">Verify your medSchedule Account</h2>
+        <p style="font-size: 16px; color: #4b5563;">Hello ${name.trim()},</p>
+        <p style="font-size: 16px; color: #4b5563;">Thank you for registering. Please use the following 6-digit code to verify your email address. This code will expire in 10 minutes.</p>
+        <div style="background-color: #f3f4f6; padding: 15px; text-align: center; border-radius: 6px; margin: 25px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #111827;">${otp}</span>
+        </div>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">If you didn't create this account, you can safely ignore this email.</p>
+      </div>
+    `;
+
+    // Fire and forget email (or await if you want to ensure it sent before replying)
+    sendEmail({
+      to: user.email,
+      subject: 'medSchedule - Email Verification Code',
+      html: emailHtml,
+    });
 
     res.status(201).json({
       status: 201,
-      data: { token, user: formatUser(user) },
+      message: 'Registration successful. Please verify your email with the OTP sent to you.',
+      data: { email: user.email }, // Do NOT send token yet
     });
   } catch (error) {
     console.error('Patient register error:', error);
     res.status(500).json({ status: 500, message: 'Server error during registration' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /api/auth/patient/verify-otp — Verify email OTP
+// ═══════════════════════════════════════════════════════════════════════════════
+router.post('/patient/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ status: 400, message: 'Email and OTP are required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim(), role: 'patient' });
+
+    if (!user) {
+      return res.status(404).json({ status: 404, message: 'User not found' });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ status: 400, message: 'Email is already verified' });
+    }
+
+    if (user.otp !== otp) {
+      return res.status(400).json({ status: 400, message: 'Invalid OTP code' });
+    }
+
+    if (user.otpExpires < new Date()) {
+      return res.status(400).json({ status: 400, message: 'OTP code has expired. Please request a new one.' });
+    }
+
+    // Success - verify user
+    user.isEmailVerified = true;
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save();
+
+    const token = signToken(user);
+
+    res.json({
+      status: 200,
+      message: 'Email verified successfully',
+      data: { token, user: formatUser(user) },
+    });
+  } catch (error) {
+    console.error('OTP verify error:', error);
+    res.status(500).json({ status: 500, message: 'Server error during verification' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /api/auth/patient/resend-otp — Resend email OTP
+// ═══════════════════════════════════════════════════════════════════════════════
+router.post('/patient/resend-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ status: 400, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim(), role: 'patient' });
+
+    if (!user) {
+      return res.status(404).json({ status: 404, message: 'User not found' });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ status: 400, message: 'Email is already verified' });
+    }
+
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    await user.save();
+
+    // Send email
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #2563eb; margin-bottom: 20px;">Your New Verification Code</h2>
+        <p style="font-size: 16px; color: #4b5563;">Hello ${user.name},</p>
+        <p style="font-size: 16px; color: #4b5563;">You requested a new verification code. Please use the following 6-digit code to verify your email address. This code will expire in 10 minutes.</p>
+        <div style="background-color: #f3f4f6; padding: 15px; text-align: center; border-radius: 6px; margin: 25px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #111827;">${otp}</span>
+        </div>
+      </div>
+    `;
+
+    sendEmail({
+      to: user.email,
+      subject: 'medSchedule - New Verification Code',
+      html: emailHtml,
+    });
+
+    res.json({
+      status: 200,
+      message: 'A new OTP has been sent to your email',
+    });
+  } catch (error) {
+    console.error('OTP resend error:', error);
+    res.status(500).json({ status: 500, message: 'Server error during resend' });
   }
 });
 

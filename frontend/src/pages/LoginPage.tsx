@@ -7,19 +7,21 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
-  const { staffLogin, patientLogin, patientRegister, googleAuth } = useAuth();
+  const { staffLogin, patientLogin, patientRegister, verifyOTP, resendOTP, googleAuth } = useAuth();
 
-  const [isLoginView, setIsLoginView] = useState(true); // true = login, false = register
+  const [mode, setMode] = useState<'login' | 'register' | 'otp'>('login');
 
   // Form state
   const [identifier, setIdentifier] = useState(''); // Used for Login (Email or Username)
   const [username, setUsername] = useState(''); // Used for Register
-  const [email, setEmail] = useState(''); // Used for Register
+  const [email, setEmail] = useState(''); // Used for Register & OTP
   const [password, setPassword] = useState('');
   const [name, setName] = useState(''); // Used for Register
+  const [otp, setOtp] = useState(''); // Used for OTP
 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const googleButtonContainerRef = useRef<HTMLDivElement>(null);
 
@@ -53,7 +55,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoginView]);
+  }, [mode]);
 
   const handleGoogleCredentialResponse = async (response: any) => {
     setError('');
@@ -70,12 +72,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     setIsLoading(true);
 
     try {
       let result;
 
-      if (isLoginView) {
+      if (mode === 'login') {
         // Automatically route to staff or patient auth based on whether it looks like an email
         const isStaff = identifier.trim().includes('@');
         if (isStaff) {
@@ -83,15 +86,35 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         } else {
           result = await patientLogin(identifier.trim(), password);
         }
-      } else {
-        // Registration is strictly for patients
-        result = await patientRegister(username.trim(), password, name.trim(), email.trim() || undefined);
-      }
 
-      if (result && result.success) {
-        onLogin();
-      } else {
-        setError(result?.error || 'Authentication failed');
+        if (result && result.success) {
+          onLogin();
+        } else {
+          // Special handling if email is not verified
+          if (result?.error?.includes('verify your email')) {
+            setEmail(identifier.trim()); // Set email for OTP flow
+            setMode('otp');
+            setSuccessMsg('Please enter the OTP sent to your email to continue.');
+          } else {
+            setError(result?.error || 'Authentication failed');
+          }
+        }
+      } else if (mode === 'register') {
+        // Registration is strictly for patients
+        result = await patientRegister(username.trim(), password, name.trim(), email.trim());
+        if (result && result.success) {
+          setMode('otp');
+          setSuccessMsg('Registration successful! Please check your email for the verification code.');
+        } else {
+          setError(result?.error || 'Registration failed');
+        }
+      } else if (mode === 'otp') {
+        result = await verifyOTP(email.trim(), otp.trim());
+        if (result && result.success) {
+          onLogin();
+        } else {
+          setError(result?.error || 'OTP Verification failed');
+        }
       }
     } catch {
       setError('An unexpected error occurred. Please try again.');
@@ -100,17 +123,32 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     }
   };
 
+  const handleResendOTP = async () => {
+    setError('');
+    setSuccessMsg('');
+    setIsLoading(true);
+    const result = await resendOTP(email.trim());
+    if (result && result.success) {
+      setSuccessMsg('A new OTP has been sent to your email.');
+    } else {
+      setError(result?.error || 'Failed to resend OTP');
+    }
+    setIsLoading(false);
+  };
+
   const resetForm = () => {
     setIdentifier('');
     setUsername('');
     setEmail('');
     setPassword('');
     setName('');
+    setOtp('');
     setError('');
+    setSuccessMsg('');
   };
 
   const toggleView = () => {
-    setIsLoginView(!isLoginView);
+    setMode(mode === 'login' ? 'register' : 'login');
     resetForm();
   };
 
@@ -161,18 +199,27 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div className="p-8 lg:p-12 relative bg-white">
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              {isLoginView ? 'Welcome Back' : 'Create Account'}
+              {mode === 'login' ? 'Welcome Back' : mode === 'register' ? 'Create Account' : 'Verify Email'}
             </h2>
             <p className="text-gray-500">
-              {isLoginView
+              {mode === 'login'
                 ? 'Sign in to access your dashboard'
-                : 'Join MedSchedule to manage your healthcare'}
+                : mode === 'register' ? 'Join MedSchedule to manage your healthcare' : 'Enter the 6-digit code sent to your email'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* OTP specific fields */}
+            {mode === 'otp' && (
+              <div className="animate-fade-up">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Verification Code</label>
+                <input type="text" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900" placeholder="------" maxLength={6} required />
+                <p className="text-sm text-gray-500 mt-3 text-center">Code sent to {email}</p>
+              </div>
+            )}
+
             {/* Registration specific fields */}
-            {!isLoginView && (
+            {mode === 'register' && (
               <>
                 <div className="animate-fade-up">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
@@ -180,12 +227,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 </div>
 
                 <div className="animate-fade-up" style={{ animationDelay: '0.1s' }}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                       <Mail className="w-5 h-5 text-gray-400" />
                     </div>
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900" placeholder="you@example.com" />
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900" placeholder="you@example.com" required />
                   </div>
                 </div>
 
@@ -202,7 +249,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             )}
 
             {/* Login specific fields */}
-            {isLoginView && (
+            {mode === 'login' && (
               <div className="animate-fade-up">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Email or Username</label>
                 <div className="relative">
@@ -214,16 +261,24 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               </div>
             )}
 
-            {/* Password (Shared) */}
-            <div className="animate-fade-up" style={{ animationDelay: isLoginView ? '0.1s' : '0.3s' }}>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <div className="relative">
-                <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900 pr-12" placeholder={isLoginView ? "Enter your password" : "Create a password (min 6. chars)"} required minLength={!isLoginView ? 6 : undefined} />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+            {/* Password (Shared between Login and Register) */}
+            {(mode === 'login' || mode === 'register') && (
+              <div className="animate-fade-up" style={{ animationDelay: mode === 'login' ? '0.1s' : '0.3s' }}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <div className="relative">
+                  <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900 pr-12" placeholder={mode === 'login' ? "Enter your password" : "Create a password (min 6. chars)"} required minLength={mode === 'register' ? 6 : undefined} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
+
+            {successMsg && (
+              <div className="bg-green-50 border border-green-100 text-green-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-fade-in">
+                <Mail className="w-4 h-4 flex-shrink-0" /> {successMsg}
+              </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-fade-in">
@@ -231,13 +286,21 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               </div>
             )}
 
-            <button type="submit" disabled={isLoading} className="w-full py-3 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-70 flex items-center justify-center gap-2 animate-fade-up shadow-blue-500/25 shadow-lg" style={{ animationDelay: isLoginView ? '0.2s' : '0.4s' }}>
+            <button type="submit" disabled={isLoading} className="w-full py-3 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-70 flex items-center justify-center gap-2 animate-fade-up shadow-blue-500/25 shadow-lg" style={{ animationDelay: mode === 'login' ? '0.2s' : '0.4s' }}>
               {isLoading ? (
                 <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
               ) : (
-                <>{!isLoginView ? <UserPlus className="w-5 h-5" /> : <LogIn className="w-5 h-5" />} {!isLoginView ? 'Create Account' : 'Sign In'}</>
+                <>{mode === 'register' ? <UserPlus className="w-5 h-5" /> : mode === 'otp' ? <Shield className="w-5 h-5" /> : <LogIn className="w-5 h-5" />} {mode === 'register' ? 'Create Account' : mode === 'otp' ? 'Verify OTP' : 'Sign In'}</>
               )}
             </button>
+            
+            {mode === 'otp' && (
+              <div className="text-center mt-4">
+                <button type="button" onClick={handleResendOTP} disabled={isLoading} className="text-sm font-semibold text-blue-600 hover:underline disabled:opacity-50">
+                  Didn't receive code? Resend
+                </button>
+              </div>
+            )}
           </form>
 
           {/* Google OAuth */}
@@ -253,12 +316,22 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </div>
 
           {/* Toggle View */}
-          <div className="mt-8 text-center text-sm text-gray-600 animate-fade-up" style={{ animationDelay: isLoginView ? '0.4s' : '0.5s' }}>
-            {isLoginView ? "Don't have a patient account? " : "Already have an account? "}
-            <button type="button" onClick={toggleView} className="font-semibold text-blue-600 hover:underline">
-              {isLoginView ? 'Register here' : 'Sign in instead'}
-            </button>
-          </div>
+          {mode !== 'otp' && (
+            <div className="mt-8 text-center text-sm text-gray-600 animate-fade-up" style={{ animationDelay: mode === 'login' ? '0.4s' : '0.5s' }}>
+              {mode === 'login' ? "Don't have a patient account? " : "Already have an account? "}
+              <button type="button" onClick={toggleView} className="font-semibold text-blue-600 hover:underline">
+                {mode === 'login' ? 'Register here' : 'Sign in instead'}
+              </button>
+            </div>
+          )}
+          
+          {mode === 'otp' && (
+            <div className="mt-8 text-center text-sm text-gray-600 animate-fade-up">
+              <button type="button" onClick={() => setMode('login')} className="font-semibold text-gray-600 hover:underline">
+                Back to Login
+              </button>
+            </div>
+          )}
 
 
 

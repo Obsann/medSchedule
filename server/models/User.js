@@ -55,6 +55,18 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  isEmailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  otp: {
+    type: String,
+    default: null,
+  },
+  otpExpires: {
+    type: Date,
+    default: null,
+  },
 }, { timestamps: true });
 
 // Hash password before saving (only if password exists and was modified)

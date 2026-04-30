@@ -6,7 +6,9 @@ interface AuthContextType {
   user: Omit<User, 'password'> & { photoUrl?: string; email?: string } | null;
   staffLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   patientLogin: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  patientRegister: (username: string, password: string, name: string, email?: string) => Promise<{ success: boolean; error?: string }>;
+  patientRegister: (username: string, password: string, name: string, email: string) => Promise<{ success: boolean; error?: string }>;
+  verifyOTP: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>;
+  resendOTP: (email: string) => Promise<{ success: boolean; error?: string }>;
   googleAuth: (credential: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateUserPhoto: (photoUrl: string) => void;
@@ -67,16 +69,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ─── Patient: registration ─────────────────────────────────────────────────
-  const patientRegister = useCallback(async (username: string, password: string, name: string, email?: string) => {
+  const patientRegister = useCallback(async (username: string, password: string, name: string, email: string) => {
     setIsLoading(true);
     try {
       const res = await authApi.patientRegister(username, password, name, email);
       if (res.status === 201) {
+        // Do NOT set user or token yet. They must verify OTP.
+        return { success: true };
+      }
+      return { success: false, error: res.message || 'Registration failed' };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // ─── Patient: Verify OTP ───────────────────────────────────────────────────
+  const verifyOTP = useCallback(async (email: string, otp: string) => {
+    setIsLoading(true);
+    try {
+      const res = await authApi.verifyOTP(email, otp);
+      if (res.status === 200) {
         setUser(res.data.user);
         saveToken(res.data.token);
         return { success: true };
       }
-      return { success: false, error: res.message || 'Registration failed' };
+      return { success: false, error: res.message || 'OTP verification failed' };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // ─── Patient: Resend OTP ───────────────────────────────────────────────────
+  const resendOTP = useCallback(async (email: string) => {
+    setIsLoading(true);
+    try {
+      const res = await authApi.resendOTP(email);
+      if (res.status === 200) {
+        return { success: true };
+      }
+      return { success: false, error: res.message || 'Failed to resend OTP' };
     } catch {
       return { success: false, error: 'Network error. Please try again.' };
     } finally {
@@ -117,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, staffLogin, patientLogin, patientRegister, googleAuth, logout,
+      user, staffLogin, patientLogin, patientRegister, verifyOTP, resendOTP, googleAuth, logout,
       updateUserPhoto, updateUserName,
       isAuthenticated: !!user, isLoading
     }}>
