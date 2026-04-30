@@ -1,7 +1,7 @@
 import type { User, Department, Staff, Shift, PatientProfile } from '../types';
 
 // ─── API Base URL ────────────────────────────────────────────────────────────
-const API_BASE = 'http://localhost:5123/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5123/api';
 
 // ─── API Response Types ──────────────────────────────────────────────────────
 interface ApiResponse<T = unknown> {
@@ -104,10 +104,26 @@ export const authApi = {
   },
 
   /** Patient registration */
-  async patientRegister(username: string, password: string, name: string, email?: string): Promise<ApiResponse<AuthResponse>> {
-    return fetchApi<AuthResponse>('/auth/patient/register', {
+  async patientRegister(username: string, password: string, name: string, email: string): Promise<ApiResponse<AuthResponse | { email: string }>> {
+    return fetchApi<AuthResponse | { email: string }>('/auth/patient/register', {
       method: 'POST',
       body: JSON.stringify({ username, password, name, email }),
+    });
+  },
+
+  /** Verify OTP */
+  async verifyOTP(email: string, otp: string): Promise<ApiResponse<AuthResponse>> {
+    return fetchApi<AuthResponse>('/auth/patient/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    });
+  },
+
+  /** Resend OTP */
+  async resendOTP(email: string): Promise<ApiResponse<{ message: string }>> {
+    return fetchApi<{ message: string }>('/auth/patient/resend-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     });
   },
 
@@ -264,7 +280,7 @@ export const statsApi = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // UNIFIED PROFILE API (all roles)
 // ═══════════════════════════════════════════════════════════════════════════════
-const SERVER_BASE = 'http://localhost:5123';
+const SERVER_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5123';
 
 export function getFullPhotoUrl(photoUrl: string | undefined | null): string {
   if (!photoUrl) return '';
