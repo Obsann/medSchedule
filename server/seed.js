@@ -126,16 +126,27 @@ async function seed() {
     const usersData = [
       // Admin — uses domain email for login
       { username: 'admin', email: 'admin@medSchedule.et', password: 'admin123', role: 'admin', name: 'System Administrator', staffId: adminStaff._id, authProvider: 'local' },
-      // Staff — each has their domain email for login
-      { username: 'drabebe', email: 'abebe.kebede@medSchedule.et', password: 'staff123', role: 'staff', name: 'Dr. Abebe Kebede', staffId: staffMap['Abebe Kebede'], authProvider: 'local' },
-      { username: 'drsarah', email: 'sarah.johnson@medSchedule.et', password: 'staff123', role: 'staff', name: 'Dr. Sarah Johnson', staffId: staffMap['Sarah Johnson'], authProvider: 'local' },
-      { username: 'nursemeron', email: 'meron.girma@medSchedule.et', password: 'staff123', role: 'staff', name: 'Nurse Meron Girma', staffId: staffMap['Meron Girma'], authProvider: 'local' },
-      { username: 'drhanna', email: 'hanna.bekele@medSchedule.et', password: 'staff123', role: 'staff', name: 'Dr. Hanna Bekele', staffId: staffMap['Hanna Bekele'], authProvider: 'local' },
-      { username: 'drsamuel', email: 'samuel.gizaw@medSchedule.et', password: 'staff123', role: 'staff', name: 'Dr. Samuel Gizaw', staffId: staffMap['Samuel Gizaw'], authProvider: 'local' },
-      { username: 'nursedereje', email: 'dereje.bekele@medSchedule.et', password: 'staff123', role: 'staff', name: 'Nurse Dereje Bekele', staffId: staffMap['Dereje Bekele'], authProvider: 'local' },
       // Patients — use standard username/password
       { username: 'patient1', email: 'amanuel@gmail.com', password: 'patient123', role: 'patient', name: 'Amanuel Girma', staffId: null, authProvider: 'local' },
     ];
+
+    // Generate user accounts for ALL seeded staff members
+    staffMembers.forEach(staff => {
+      const isDoctor = staff.role === 'doctor';
+      const title = isDoctor ? 'Dr.' : 'Nurse';
+      // Make username unique by combining first and last name
+      const username = `${isDoctor ? 'dr' : 'nurse'}${staff.firstName.toLowerCase()}${staff.lastName.toLowerCase()}`;
+      
+      usersData.push({
+        username: username,
+        email: staff.email,
+        password: 'staff123',
+        role: 'staff',
+        name: `${title} ${staff.firstName} ${staff.lastName}`,
+        staffId: staff._id,
+        authProvider: 'local'
+      });
+    });
 
     const createdUsers = [];
     for (const u of usersData) {

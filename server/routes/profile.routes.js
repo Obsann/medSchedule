@@ -14,9 +14,10 @@ const router = express.Router();
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'medschedule/profiles',
+    folder: 'medschedule/users',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-    public_id: (req, file) => `${req.user._id}-${Date.now()}`,
+    public_id: (req, file) => `${req.user._id}/profile`,
+    overwrite: true,
   },
 });
 

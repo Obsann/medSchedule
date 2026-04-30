@@ -44,7 +44,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasFetchedInitial, setHasFetchedInitial] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   // ─── Toast helpers ────────────────────────────────────────────────────────
   const addToast = useCallback((message: string, type: ToastMessage['type']) => {
@@ -60,9 +60,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // ─── Fetch all data from API ──────────────────────────────────────────────
   const fetchData = useCallback(async (isBackground = false) => {
     const token = getSavedToken();
-    if (!token) { setIsLoading(false); return; }
-    const { valid } = decodeToken(token);
-    if (!valid) { setIsLoading(false); return; }
+    if (!token || !decodeToken(token).valid) {
+      setIsLoading(false);
+      setHasFetchedInitial(true);
+      logout();
+      return;
+    }
 
     if (!isBackground) setIsLoading(true);
     setError(null);
@@ -80,9 +83,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setError('Failed to load data from server. Please refresh.');
       addToast('Network error: Could not fetch data', 'error');
     } finally {
+      setHasFetchedInitial(true);
       if (!isBackground) setIsLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, logout]);
 
   // Fetch data when authenticated state changes
   useEffect(() => { 
