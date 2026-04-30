@@ -36,8 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await authApi.staffLogin(email, password);
       if (res.status === 200) {
-        setUser(res.data.user);
         saveToken(res.data.token);
+        setUser(res.data.user);
         return { success: true };
       }
       return { success: false, error: res.message || 'Login failed' };

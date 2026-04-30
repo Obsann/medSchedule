@@ -42,6 +42,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasFetchedInitial, setHasFetchedInitial] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { isAuthenticated } = useAuth();
 
@@ -57,13 +58,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ─── Fetch all data from API ──────────────────────────────────────────────
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isBackground = false) => {
     const token = getSavedToken();
     if (!token) { setIsLoading(false); return; }
     const { valid } = decodeToken(token);
     if (!valid) { setIsLoading(false); return; }
 
-    setIsLoading(true);
+    if (!isBackground) setIsLoading(true);
     setError(null);
     try {
       const [deptRes, staffRes, shiftRes] = await Promise.all([
@@ -74,11 +75,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (deptRes.status === 200) setDepartments(deptRes.data);
       if (staffRes.status === 200) setStaff(staffRes.data);
       if (shiftRes.status === 200) setShifts(shiftRes.data);
+      setHasFetchedInitial(true);
     } catch {
       setError('Failed to load data from server. Please refresh.');
       addToast('Network error: Could not fetch data', 'error');
     } finally {
-      setIsLoading(false);
+      if (!isBackground) setIsLoading(false);
     }
   }, [addToast]);
 
@@ -90,6 +92,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDepartments([]);
       setStaff([]);
       setShifts([]);
+      setHasFetchedInitial(false);
       setIsLoading(false);
     }
   }, [fetchData, isAuthenticated]);
@@ -98,10 +101,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated) return;
     const handleFocus = () => {
-      // Only refresh if we aren't already loading
-      if (!isLoading) {
-        fetchData();
-      }
+      // Background refresh without triggering full-screen loading
+      fetchData(true);
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
@@ -224,6 +225,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast]);
 
+  // ─── Exposed Methods ──────────────────────────────────────────────────────
+  const refreshData = async () => {
+    await fetchData(true);
+  };
+
   // ─── Lookup helpers ───────────────────────────────────────────────────────
   const getStaffName = useCallback((staffId: string) => {
     const s = staff.find(st => st.id === staffId);
@@ -237,7 +243,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataContext.Provider value={{
-      departments, staff, shifts, toasts, isLoading, error,
+      departments, staff, shifts, toasts, 
+      isLoading: isLoading || (isAuthenticated && !hasFetchedInitial), 
+      error,
       addToast, removeToast,
       addDepartment, updateDepartment, deleteDepartment,
       addStaff, updateStaff, deleteStaff,
