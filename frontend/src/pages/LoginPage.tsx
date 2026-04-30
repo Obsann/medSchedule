@@ -36,7 +36,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         if (googleButtonContainerRef.current) {
           window.google.accounts.id.renderButton(
             googleButtonContainerRef.current,
-            { theme: 'outline', size: 'large', text: 'continue_with', width: '100%' }
+            { theme: 'outline', size: 'large', text: 'continue_with' }
           );
         }
         if (intervalId) clearInterval(intervalId);

@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const User = require('../models/User');
 const Patient = require('../models/Patient');
 const Staff = require('../models/Staff');
@@ -10,25 +10,20 @@ const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '..', 'uploads', 'profiles');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Multer config
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${req.user._id}-${Date.now()}${ext}`);
+// Multer config with Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'medschedule/profiles',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+    public_id: (req, file) => `${req.user._id}-${Date.now()}`,
   },
 });
 
+// Keep the fileFilter to prevent invalid formats early, although Cloudinary also rejects them
 const fileFilter = (_req, file, cb) => {
-  const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (allowed.includes(ext)) {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error('Only image files (jpg, png, webp, gif) are allowed'), false);
@@ -57,7 +52,7 @@ router.post('/upload-photo', (req, res, next) => {
       return res.status(400).json({ status: 400, message: 'No image file provided' });
     }
 
-    const photoUrl = `/uploads/profiles/${req.file.filename}`;
+    const photoUrl = req.file.path; // Cloudinary returns the full URL in path
 
     // Update user record
     await User.findByIdAndUpdate(req.user._id, { photoUrl });

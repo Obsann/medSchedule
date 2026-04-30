@@ -29,6 +29,7 @@ interface DataContextType {
   deleteShift: (id: string) => Promise<void>;
   getStaffName: (staffId: string) => string;
   getDepartmentName: (deptId: string) => string;
+  refreshData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -92,6 +93,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
   }, [fetchData, isAuthenticated]);
+
+  // Auto-refresh data when the window regains focus
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const handleFocus = () => {
+      // Only refresh if we aren't already loading
+      if (!isLoading) {
+        fetchData();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isAuthenticated, fetchData, isLoading]);
 
   // ─── Departments ──────────────────────────────────────────────────────────
   const addDepartment = useCallback(async (dept: Omit<Department, 'id'>) => {
@@ -229,6 +243,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addStaff, updateStaff, deleteStaff,
       addShift, updateShift, deleteShift,
       getStaffName, getDepartmentName,
+      refreshData: fetchData,
     }}>
       {children}
     </DataContext.Provider>

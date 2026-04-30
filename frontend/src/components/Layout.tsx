@@ -4,7 +4,7 @@ import { useData } from '../context/DataContext';
 import { getFullPhotoUrl } from '../api';
 import {
   LayoutDashboard, Users, CalendarDays, Building2, Clock, UserCheck, LogOut, Menu, X,
-  CheckCircle, AlertCircle, Info, AlertTriangle, Stethoscope, Activity
+  CheckCircle, AlertCircle, Info, AlertTriangle, Stethoscope, Activity, RefreshCw
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -67,7 +67,9 @@ const Toast = () => {
 
 export default function Layout({ children, currentPage, onNavigate }: LayoutProps) {
   const { user, logout } = useAuth();
+  const { refreshData } = useData();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const adminNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -201,6 +203,16 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
               </h2>
             </div>
             <div className="flex items-center gap-4">
+              <button 
+                onClick={() => {
+                  setIsRefreshing(true);
+                  refreshData().finally(() => setIsRefreshing(false));
+                }}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                title="Refresh Data"
+              >
+                <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
+              </button>
               <div className="text-right hidden sm:block">
                 <p className="text-xs text-gray-500">Logged in as</p>
                 <p className="text-sm font-medium text-gray-700">{user?.name}</p>
