@@ -26,7 +26,7 @@ async function verifyEmail(email) {
     const reason = result.reason || 'unknown';
     const messages = {
       regex: 'The email address format is invalid.',
-      typo: `Did you mean "${result.validators?.typo?.reason}"? Please check for typos.`,
+      typo: 'Invalid email address.',
       disposable: 'Disposable/temporary email addresses are not allowed. Please use a real email.',
       mx: 'The email domain does not exist or cannot receive emails.',
       smtp: 'The email mailbox could not be verified.',
