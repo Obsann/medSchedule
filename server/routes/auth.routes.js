@@ -6,6 +6,7 @@ const Staff = require('../models/Staff');
 const Patient = require('../models/Patient');
 const { authenticate } = require('../middleware/auth');
 const sendEmail = require('../utils/sendEmail');
+const { verifyEmail } = require('../utils/zeroBounce');
 
 const router = express.Router();
 
@@ -177,6 +178,15 @@ router.post('/patient/register', async (req, res) => {
       return res.status(400).json({
         status: 400,
         message: `Cannot register with an @${STAFF_DOMAIN} email. Staff accounts are managed by administrators.`,
+      });
+    }
+
+    // ── ZeroBounce email verification ──
+    const zbResult = await verifyEmail(email);
+    if (!zbResult.valid) {
+      return res.status(400).json({
+        status: 400,
+        message: zbResult.message,
       });
     }
 
