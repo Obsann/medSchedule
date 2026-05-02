@@ -12,7 +12,7 @@ async function verifyEmail(email) {
     const result = await validate({
       email,
       validateRegex: true,
-      validateMx: false, // Disabled to allow testing with fake domains
+      validateMx: true, // Strictly check if domain exists and can receive emails
       validateTypo: true,
       validateDisposable: true,
       validateSMTP: false, // Disabled — too many false negatives from firewall/cloud hosts
