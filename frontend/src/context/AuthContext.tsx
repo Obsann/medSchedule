@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import type { User } from '../types';
 import { authApi, saveToken, getSavedToken, clearToken, decodeToken } from '../api';
 
@@ -10,6 +10,8 @@ interface AuthContextType {
   verifyOTP: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   resendOTP: (email: string) => Promise<{ success: boolean; error?: string }>;
   googleAuth: (credential: string) => Promise<{ success: boolean; error?: string }>;
+  forgotPassword: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   logout: () => void;
   updateUserPhoto: (photoUrl: string) => void;
   updateUserName: (name: string) => void;
@@ -31,6 +33,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const token = getSavedToken();
+    if (token && user && user.name === '') {
+      authApi.getMe(token).then(res => {
+        if (res.status === 200 && res.data) {
+          setUser(res.data as any);
+        } else if (res.status === 401) {
+          clearToken();
+          setUser(null);
+        }
+      }).catch(console.error);
+    }
+  }, [user?.name]);
 
   // ─── Staff & Admin: domain email login ─────────────────────────────────────
   const staffLogin = useCallback(async (email: string, password: string) => {
@@ -137,6 +153,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // ─── Forgot Password ────────────────────────────────────────────────────────
+  const forgotPassword = useCallback(async (email: string) => {
+    setIsLoading(true);
+    try {
+      const res = await authApi.forgotPassword(email);
+      if (res.status === 200) {
+        return { success: true, message: res.message };
+      }
+      return { success: false, error: res.message || 'Failed to send reset code' };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // ─── Reset Password ────────────────────────────────────────────────────────
+  const resetPassword = useCallback(async (email: string, otp: string, newPassword: string) => {
+    setIsLoading(true);
+    try {
+      const res = await authApi.resetPassword(email, otp, newPassword);
+      if (res.status === 200) {
+        return { success: true, message: res.message };
+      }
+      return { success: false, error: res.message || 'Password reset failed' };
+    } catch {
+      return { success: false, error: 'Network error. Please try again.' };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
     clearToken();
@@ -152,7 +200,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, staffLogin, patientLogin, patientRegister, verifyOTP, resendOTP, googleAuth, logout,
+      user, staffLogin, patientLogin, patientRegister, verifyOTP, resendOTP, googleAuth,
+      forgotPassword, resetPassword, logout,
       updateUserPhoto, updateUserName,
       isAuthenticated: !!user, isLoading
     }}>

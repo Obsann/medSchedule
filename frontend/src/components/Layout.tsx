@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { getFullPhotoUrl } from '../api';
@@ -70,6 +70,27 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
   const { refreshData } = useData();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    // Teleport the Google Translate widget from the body into the header
+    const translateWidget = document.getElementById('google_translate_element');
+    const headerTarget = document.getElementById('google_translate_header_target');
+    
+    if (translateWidget && headerTarget) {
+      translateWidget.style.position = 'static';
+      headerTarget.appendChild(translateWidget);
+    }
+    
+    return () => {
+      // Put it back to the body when Layout unmounts (e.g. logging out)
+      if (translateWidget) {
+        translateWidget.style.position = 'fixed';
+        translateWidget.style.bottom = '16px';
+        translateWidget.style.left = '16px';
+        document.body.appendChild(translateWidget);
+      }
+    };
+  }, []);
 
   const adminNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -213,6 +234,9 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
               >
                 <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin text-blue-600' : ''}`} />
               </button>
+              
+              <div id="google_translate_header_target" className="flex items-center"></div>
+
               <div className="text-right hidden sm:block">
                 <p className="text-xs text-gray-500">Logged in as</p>
                 <p className="text-sm font-medium text-gray-700">{user?.name}</p>

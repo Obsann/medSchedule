@@ -131,6 +131,7 @@ router.post('/', requireRole('admin'), async (req, res) => {
       role: 'staff',
       staffId: item._id,
       authProvider: 'local',
+      isEmailVerified: true, // Admin-created accounts don't need OTP verification
     });
 
     res.status(201).json({
@@ -164,6 +165,19 @@ router.put('/:id', requireRole('admin'), async (req, res) => {
 
     if (!item) {
       return res.status(404).json({ status: 404, message: 'Staff not found' });
+    }
+
+    // Keep the linked User record in sync with Staff name/email
+    const userUpdates = {};
+    if (req.body.firstName || req.body.lastName) {
+      userUpdates.name = `${item.firstName} ${item.lastName}`;
+    }
+    if (req.body.email) {
+      userUpdates.email = item.email;
+      userUpdates.username = item.email; // username IS the email for staff
+    }
+    if (Object.keys(userUpdates).length > 0) {
+      await User.findOneAndUpdate({ staffId: item._id }, { $set: userUpdates });
     }
 
     res.json({

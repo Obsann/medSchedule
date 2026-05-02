@@ -1,25 +1,30 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Shield, Heart, Eye, EyeOff, UserPlus, LogIn, Mail, User as UserIcon } from 'lucide-react';
+import { Shield, Heart, Eye, EyeOff, UserPlus, LogIn, Mail, User as UserIcon, KeyRound, ArrowLeft } from 'lucide-react';
 
 interface LoginPageProps {
   onLogin: () => void;
 }
 
-export default function LoginPage({ onLogin }: LoginPageProps) {
-  const { staffLogin, patientLogin, patientRegister, verifyOTP, resendOTP, googleAuth } = useAuth();
+type Mode = 'login' | 'register' | 'otp' | 'forgot-password' | 'reset-password';
 
-  const [mode, setMode] = useState<'login' | 'register' | 'otp'>('login');
+export default function LoginPage({ onLogin }: LoginPageProps) {
+  const { staffLogin, patientLogin, patientRegister, verifyOTP, resendOTP, googleAuth, forgotPassword, resetPassword } = useAuth();
+
+  const [mode, setMode] = useState<Mode>('login');
 
   // Form state
   const [identifier, setIdentifier] = useState(''); // Used for Login (Email or Username)
   const [username, setUsername] = useState(''); // Used for Register
-  const [email, setEmail] = useState(''); // Used for Register & OTP
+  const [email, setEmail] = useState(''); // Used for Register & OTP & Forgot Password
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState(''); // Used for Register
-  const [otp, setOtp] = useState(''); // Used for OTP
+  const [otp, setOtp] = useState(''); // Used for OTP & Reset Password
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -36,9 +41,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           callback: handleGoogleCredentialResponse
         });
         if (googleButtonContainerRef.current) {
+          googleButtonContainerRef.current.innerHTML = ''; // Prevent duplicates on re-render
           window.google.accounts.id.renderButton(
             googleButtonContainerRef.current,
-            { theme: 'outline', size: 'large', text: 'continue_with' }
+            { theme: 'outline', size: 'large', text: 'continue_with', width: 300 }
           );
         }
         if (intervalId) clearInterval(intervalId);
@@ -56,6 +62,27 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       if (intervalId) clearInterval(intervalId);
     };
   }, [mode]);
+
+  useEffect(() => {
+    // Teleport the Google Translate widget from the body into the header
+    const translateWidget = document.getElementById('google_translate_element');
+    const headerTarget = document.getElementById('google_translate_header_target');
+    
+    if (translateWidget && headerTarget) {
+      translateWidget.style.position = 'static';
+      headerTarget.appendChild(translateWidget);
+    }
+    
+    return () => {
+      // Put it back to the body when component unmounts
+      if (translateWidget) {
+        translateWidget.style.position = 'fixed';
+        translateWidget.style.bottom = '16px';
+        translateWidget.style.left = '16px';
+        document.body.appendChild(translateWidget);
+      }
+    };
+  }, []);
 
   const handleGoogleCredentialResponse = async (response: any) => {
     setError('');
@@ -115,6 +142,36 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         } else {
           setError(result?.error || 'OTP Verification failed');
         }
+      } else if (mode === 'forgot-password') {
+        result = await forgotPassword(email.trim());
+        if (result && result.success) {
+          setMode('reset-password');
+          setSuccessMsg(result.message || 'If an account exists with this email, a reset code has been sent.');
+          setOtp('');
+          setNewPassword('');
+          setConfirmPassword('');
+        } else {
+          setError(result?.error || 'Failed to send reset code');
+        }
+      } else if (mode === 'reset-password') {
+        if (newPassword !== confirmPassword) {
+          setError('Passwords do not match');
+          setIsLoading(false);
+          return;
+        }
+        if (newPassword.length < 6) {
+          setError('Password must be at least 6 characters');
+          setIsLoading(false);
+          return;
+        }
+        result = await resetPassword(email.trim(), otp.trim(), newPassword);
+        if (result && result.success) {
+          setMode('login');
+          resetForm();
+          setSuccessMsg(result.message || 'Password reset successfully! You can now log in.');
+        } else {
+          setError(result?.error || 'Password reset failed');
+        }
       }
     } catch {
       setError('An unexpected error occurred. Please try again.');
@@ -136,11 +193,26 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setIsLoading(false);
   };
 
+  const handleResendResetCode = async () => {
+    setError('');
+    setSuccessMsg('');
+    setIsLoading(true);
+    const result = await forgotPassword(email.trim());
+    if (result && result.success) {
+      setSuccessMsg('A new reset code has been sent to your email.');
+    } else {
+      setError(result?.error || 'Failed to resend code');
+    }
+    setIsLoading(false);
+  };
+
   const resetForm = () => {
     setIdentifier('');
     setUsername('');
     setEmail('');
     setPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
     setName('');
     setOtp('');
     setError('');
@@ -152,8 +224,29 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     resetForm();
   };
 
+  // ── Mode-specific header text ──
+  const headings: Record<Mode, { title: string; subtitle: string }> = {
+    'login': { title: 'Welcome Back', subtitle: 'Sign in to access your dashboard' },
+    'register': { title: 'Create Account', subtitle: 'Join MedSchedule to manage your healthcare' },
+    'otp': { title: 'Verify Email', subtitle: 'Enter the 6-digit code sent to your email' },
+    'forgot-password': { title: 'Forgot Password', subtitle: 'Enter your email to receive a reset code' },
+    'reset-password': { title: 'Reset Password', subtitle: 'Enter the code and your new password' },
+  };
+
+  // ── Mode-specific button text & icon ──
+  const buttonConfig: Record<Mode, { label: string; icon: JSX.Element }> = {
+    'login': { label: 'Sign In', icon: <LogIn className="w-5 h-5" /> },
+    'register': { label: 'Create Account', icon: <UserPlus className="w-5 h-5" /> },
+    'otp': { label: 'Verify OTP', icon: <Shield className="w-5 h-5" /> },
+    'forgot-password': { label: 'Send Reset Code', icon: <Mail className="w-5 h-5" /> },
+    'reset-password': { label: 'Reset Password', icon: <KeyRound className="w-5 h-5" /> },
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-700">
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-4">
+        <div id="google_translate_header_target"></div>
+      </div>
       {/* Background Animated Blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500/20 rounded-full blur-[120px] animate-pulse-soft" />
@@ -199,12 +292,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div className="p-8 lg:p-12 relative bg-white">
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              {mode === 'login' ? 'Welcome Back' : mode === 'register' ? 'Create Account' : 'Verify Email'}
+              {headings[mode].title}
             </h2>
             <p className="text-gray-500">
-              {mode === 'login'
-                ? 'Sign in to access your dashboard'
-                : mode === 'register' ? 'Join MedSchedule to manage your healthcare' : 'Enter the 6-digit code sent to your email'}
+              {headings[mode].subtitle}
             </p>
           </div>
 
@@ -216,6 +307,50 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 <input type="text" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900" placeholder="------" maxLength={6} required />
                 <p className="text-sm text-gray-500 mt-3 text-center">Code sent to {email}</p>
               </div>
+            )}
+
+            {/* Forgot Password — email input */}
+            {mode === 'forgot-password' && (
+              <div className="animate-fade-up">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Mail className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900" placeholder="Enter your account email" required />
+                </div>
+              </div>
+            )}
+
+            {/* Reset Password — OTP + new password + confirm */}
+            {mode === 'reset-password' && (
+              <>
+                <div className="animate-fade-up">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Reset Code</label>
+                  <input type="text" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900" placeholder="------" maxLength={6} required />
+                  <p className="text-sm text-gray-500 mt-3 text-center">Code sent to {email}</p>
+                </div>
+
+                <div className="animate-fade-up" style={{ animationDelay: '0.1s' }}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                  <div className="relative">
+                    <input type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900 pr-12" placeholder="Min 6 characters" required minLength={6} />
+                    <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="animate-fade-up" style={{ animationDelay: '0.2s' }}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                  <div className="relative">
+                    <input type={showNewPassword ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900 pr-12" placeholder="Re-enter new password" required minLength={6} />
+                  </div>
+                  {confirmPassword && newPassword !== confirmPassword && (
+                    <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+                  )}
+                </div>
+              </>
             )}
 
             {/* Registration specific fields */}
@@ -271,6 +406,19 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+
+                {/* Forgot password link — only on login mode */}
+                {mode === 'login' && (
+                  <div className="flex justify-end mt-2">
+                    <button
+                      type="button"
+                      onClick={() => { resetForm(); setMode('forgot-password'); }}
+                      className="text-sm text-blue-600 hover:underline font-medium"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -290,10 +438,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               {isLoading ? (
                 <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
               ) : (
-                <>{mode === 'register' ? <UserPlus className="w-5 h-5" /> : mode === 'otp' ? <Shield className="w-5 h-5" /> : <LogIn className="w-5 h-5" />} {mode === 'register' ? 'Create Account' : mode === 'otp' ? 'Verify OTP' : 'Sign In'}</>
+                <>{buttonConfig[mode].icon} {buttonConfig[mode].label}</>
               )}
             </button>
             
+            {/* Resend OTP for email verification */}
             {mode === 'otp' && (
               <div className="text-center mt-4">
                 <button type="button" onClick={handleResendOTP} disabled={isLoading} className="text-sm font-semibold text-blue-600 hover:underline disabled:opacity-50">
@@ -301,22 +450,33 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 </button>
               </div>
             )}
+
+            {/* Resend code for password reset */}
+            {mode === 'reset-password' && (
+              <div className="text-center mt-4">
+                <button type="button" onClick={handleResendResetCode} disabled={isLoading} className="text-sm font-semibold text-blue-600 hover:underline disabled:opacity-50">
+                  Didn't receive code? Resend
+                </button>
+              </div>
+            )}
           </form>
 
-          {/* Google OAuth */}
-          <div className="mt-6 animate-fade-up" style={{ animationDelay: '0.3s' }}>
-            <div className="relative flex py-2 items-center">
-              <div className="flex-grow border-t border-gray-200"></div>
-              <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">Or</span>
-              <div className="flex-grow border-t border-gray-200"></div>
+          {/* Google OAuth — only on login/register */}
+          {(mode === 'login' || mode === 'register') && (
+            <div className="mt-6 animate-fade-up" style={{ animationDelay: '0.3s' }}>
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-gray-200"></div>
+                <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">Or</span>
+                <div className="flex-grow border-t border-gray-200"></div>
+              </div>
+              <div className="mt-4 flex justify-center w-full">
+                <div ref={googleButtonContainerRef} className="w-full flex justify-center"></div>
+              </div>
             </div>
-            <div className="mt-4 flex justify-center w-full">
-              <div ref={googleButtonContainerRef} className="w-full flex justify-center"></div>
-            </div>
-          </div>
+          )}
 
-          {/* Toggle View */}
-          {mode !== 'otp' && (
+          {/* Toggle View — Login ↔ Register */}
+          {(mode === 'login' || mode === 'register') && (
             <div className="mt-8 text-center text-sm text-gray-600 animate-fade-up" style={{ animationDelay: mode === 'login' ? '0.4s' : '0.5s' }}>
               {mode === 'login' ? "Don't have a patient account? " : "Already have an account? "}
               <button type="button" onClick={toggleView} className="font-semibold text-blue-600 hover:underline">
@@ -325,15 +485,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </div>
           )}
           
-          {mode === 'otp' && (
+          {/* Back to Login — for OTP, Forgot Password, Reset Password */}
+          {(mode === 'otp' || mode === 'forgot-password' || mode === 'reset-password') && (
             <div className="mt-8 text-center text-sm text-gray-600 animate-fade-up">
-              <button type="button" onClick={() => setMode('login')} className="font-semibold text-gray-600 hover:underline">
-                Back to Login
+              <button type="button" onClick={() => { resetForm(); setMode('login'); }} className="font-semibold text-gray-600 hover:underline inline-flex items-center gap-1">
+                <ArrowLeft className="w-4 h-4" /> Back to Login
               </button>
             </div>
           )}
-
-
 
         </div>
       </div>

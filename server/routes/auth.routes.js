@@ -6,7 +6,7 @@ const Staff = require('../models/Staff');
 const Patient = require('../models/Patient');
 const { authenticate } = require('../middleware/auth');
 const sendEmail = require('../utils/sendEmail');
-const { verifyEmail } = require('../utils/zeroBounce');
+const { verifyEmail } = require('../utils/emailValidator');
 
 const router = express.Router();
 
@@ -247,8 +247,8 @@ router.post('/patient/register', async (req, res) => {
       </div>
     `;
 
-    // Fire and forget email (or await if you want to ensure it sent before replying)
-    sendEmail({
+    // Send the OTP via email
+    await sendEmail({
       to: user.email,
       subject: 'medSchedule - Email Verification Code',
       html: emailHtml,
@@ -286,7 +286,7 @@ router.post('/patient/verify-otp', async (req, res) => {
       return res.status(400).json({ status: 400, message: 'Email is already verified' });
     }
 
-    if (user.otp !== otp && otp !== '123456') {
+    if (!user.otp || user.otp !== otp) {
       return res.status(400).json({ status: 400, message: 'Invalid OTP code' });
     }
 
@@ -352,7 +352,7 @@ router.post('/patient/resend-otp', async (req, res) => {
       </div>
     `;
 
-    sendEmail({
+    await sendEmail({
       to: user.email,
       subject: 'medSchedule - New Verification Code',
       html: emailHtml,
@@ -439,6 +439,7 @@ router.post('/google', async (req, res) => {
         role: 'patient',
         googleId,
         authProvider: 'google',
+        isEmailVerified: true, // Google guarantees the email is verified
       });
 
       const patient = await Patient.create({
@@ -478,6 +479,114 @@ router.get('/me', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Get me error:', error);
     res.status(500).json({ status: 500, message: 'Server error' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /api/auth/forgot-password — Request a password reset OTP
+// ═══════════════════════════════════════════════════════════════════════════════
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ status: 400, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    if (!user) {
+      // Don't reveal whether the email exists — always return success
+      return res.json({
+        status: 200,
+        message: 'If an account exists with this email, a reset code has been sent.',
+      });
+    }
+
+    // Google-only accounts can't reset a password
+    if (user.authProvider === 'google' && !user.password) {
+      return res.json({
+        status: 200,
+        message: 'If an account exists with this email, a reset code has been sent.',
+      });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await user.save();
+
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #2563eb; margin-bottom: 20px;">Reset Your Password</h2>
+        <p style="font-size: 16px; color: #4b5563;">Hello ${user.name},</p>
+        <p style="font-size: 16px; color: #4b5563;">We received a request to reset your password. Please use the following 6-digit code. This code will expire in 10 minutes.</p>
+        <div style="background-color: #f3f4f6; padding: 15px; text-align: center; border-radius: 6px; margin: 25px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #111827;">${otp}</span>
+        </div>
+        <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">If you didn't request this, you can safely ignore this email. Your password will not change.</p>
+      </div>
+    `;
+
+    await sendEmail({
+      to: user.email,
+      subject: 'medSchedule - Password Reset Code',
+      html: emailHtml,
+    });
+
+    res.json({
+      status: 200,
+      message: 'If an account exists with this email, a reset code has been sent.',
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ status: 500, message: 'Server error during password reset request' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POST /api/auth/reset-password — Verify OTP and set new password
+// ═══════════════════════════════════════════════════════════════════════════════
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ status: 400, message: 'Email, OTP, and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ status: 400, message: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
+
+    if (!user) {
+      return res.status(404).json({ status: 404, message: 'User not found' });
+    }
+
+    if (!user.otp || user.otp !== otp) {
+      return res.status(400).json({ status: 400, message: 'Invalid reset code' });
+    }
+
+    if (user.otpExpires < new Date()) {
+      return res.status(400).json({ status: 400, message: 'Reset code has expired. Please request a new one.' });
+    }
+
+    // Set new password and clear OTP
+    user.password = newPassword;
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save(); // pre-save hook will hash the password
+
+    res.json({
+      status: 200,
+      message: 'Password has been reset successfully. You can now log in with your new password.',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ status: 500, message: 'Server error during password reset' });
   }
 });
 

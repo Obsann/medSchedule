@@ -9,11 +9,11 @@
     "seed": "node seed.js"
   },
   "dependencies": {
-    "@zerobounce/zero-bounce-sdk": "^2.1.1",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.3",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
+    "deep-email-validator": "^0.1.27",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "google-auth-library": "^10.6.2",

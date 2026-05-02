@@ -135,6 +135,22 @@ export const authApi = {
     });
   },
 
+  /** Request password reset OTP */
+  async forgotPassword(email: string): Promise<ApiResponse<{ message: string }>> {
+    return fetchApi<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  /** Reset password with OTP */
+  async resetPassword(email: string, otp: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
+    return fetchApi<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp, newPassword }),
+    });
+  },
+
   /** Get current user from JWT */
   async getMe(token: string): Promise<ApiResponse<Omit<User, 'password'>>> {
     return fetchApi<Omit<User, 'password'>>('/auth/me', {

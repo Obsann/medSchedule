@@ -151,3 +151,49 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ─── Google Translate Widget Overrides ───────────────────────────────────── */
+/* Hide the top banner bar that Google injects */
+.goog-te-banner-frame,
+.skiptranslate iframe {
+  display: none !important;
+}
+
+body {
+  top: 0 !important;
+}
+
+/* Style the dropdown to be more compact and modern */
+.goog-te-gadget {
+  font-size: 0 !important;
+}
+
+.goog-te-gadget .goog-te-combo {
+  font-size: 13px;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.goog-te-gadget .goog-te-combo:hover {
+  border-color: #93c5fd;
+}
+
+.goog-te-gadget .goog-te-combo:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* Hide "Powered by Google" text */
+.goog-te-gadget > span {
+  display: none !important;
+}
+
+.goog-logo-link {
+  display: none !important;
+}

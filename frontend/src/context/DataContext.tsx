@@ -255,7 +255,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addStaff, updateStaff, deleteStaff,
       addShift, updateShift, deleteShift,
       getStaffName, getDepartmentName,
-      refreshData: fetchData,
+      refreshData,
     }}>
       {children}
     </DataContext.Provider>
