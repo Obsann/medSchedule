@@ -125,9 +125,13 @@ async function seed() {
 
     const usersData = [
       // Admin — uses domain email for login
-      { username: 'admin', email: 'admin@medSchedule.et', password: 'admin123', role: 'admin', name: 'System Administrator', staffId: adminStaff._id, authProvider: 'local' },
+      { username: 'admin', email: 'admin@medSchedule.et', password: 'admin123', role: 'admin', name: 'System Administrator', staffId: adminStaff._id, authProvider: 'local', isEmailVerified: true },
       // Patients — use standard username/password
-      { username: 'patient1', email: 'amanuel@gmail.com', password: 'patient123', role: 'patient', name: 'Amanuel Girma', staffId: null, authProvider: 'local' },
+      { username: 'patient1', email: 'amanuel@gmail.com', password: 'patient123', role: 'patient', name: 'Amanuel Girma', staffId: null, authProvider: 'local', isEmailVerified: true },
+      { username: 'patient2', email: 'sara.bekele@gmail.com', password: 'patient123', role: 'patient', name: 'Sara Bekele', staffId: null, authProvider: 'local', isEmailVerified: true },
+      { username: 'patient3', email: 'dawit.tesfaye@gmail.com', password: 'patient123', role: 'patient', name: 'Dawit Tesfaye', staffId: null, authProvider: 'local', isEmailVerified: true },
+      { username: 'patient4', email: 'hana.mekonnen@gmail.com', password: 'patient123', role: 'patient', name: 'Hana Mekonnen', staffId: null, authProvider: 'local', isEmailVerified: true },
+      { username: 'patient5', email: 'yohannes.abera@gmail.com', password: 'patient123', role: 'patient', name: 'Yohannes Abera', staffId: null, authProvider: 'local', isEmailVerified: true },
     ];
 
     // Generate user accounts for ALL seeded staff members
@@ -144,7 +148,8 @@ async function seed() {
         role: 'staff',
         name: `${title} ${staff.firstName} ${staff.lastName}`,
         staffId: staff._id,
-        authProvider: 'local'
+        authProvider: 'local',
+        isEmailVerified: true,
       });
     });
 
@@ -155,21 +160,23 @@ async function seed() {
     }
     console.log(`Seeded ${usersData.length} users`);
 
-    // Create Patient profiles for patient users
+    // Create Patient profiles for patient users with realistic varied data
+    const patientProfiles = [
+      { dob: '1995-03-15', gender: 'Male', phone: '+251912345678', emergencyContact: { name: 'Tigist Girma', phone: '+251911234567', relation: 'Spouse' }, status: 'Out-patient' },
+      { dob: '1988-07-22', gender: 'Female', phone: '+251923456789', emergencyContact: { name: 'Kebede Bekele', phone: '+251912345001', relation: 'Father' }, status: 'Out-patient' },
+      { dob: '2001-11-04', gender: 'Male', phone: '+251934567890', emergencyContact: { name: 'Meron Tesfaye', phone: '+251913456002', relation: 'Mother' }, status: 'In-patient' },
+      { dob: '1992-01-30', gender: 'Female', phone: '+251945678901', emergencyContact: { name: 'Abel Mekonnen', phone: '+251914567003', relation: 'Brother' }, status: 'Out-patient' },
+      { dob: '1975-09-12', gender: 'Male', phone: '+251956789012', emergencyContact: { name: 'Selam Abera', phone: '+251915678004', relation: 'Wife' }, status: 'Out-patient' },
+    ];
+
     const patientUsers = createdUsers.filter(u => u.role === 'patient');
-    for (const pu of patientUsers) {
+    for (let i = 0; i < patientUsers.length; i++) {
+      const pu = patientUsers[i];
+      const profile = patientProfiles[i % patientProfiles.length];
       const patient = await Patient.create({
         userId: pu._id,
         mrn: 'MRN-' + Math.floor(100000 + Math.random() * 900000).toString(),
-        dob: '1995-03-15',
-        gender: 'Male',
-        phone: '+251 912 345 678',
-        emergencyContact: {
-          name: 'Tigist Girma',
-          phone: '+251 911 234 567',
-          relation: 'Spouse',
-        },
-        status: 'Out-patient',
+        ...profile,
       });
       pu.patientId = patient._id;
       await pu.save();
@@ -297,6 +304,10 @@ async function seed() {
     console.log('');
     console.log('PATIENT PORTAL (use username):');
     console.log('  Patient:  patient1 / patient123');
+    console.log('  Patient:  patient2 / patient123');
+    console.log('  Patient:  patient3 / patient123');
+    console.log('  Patient:  patient4 / patient123');
+    console.log('  Patient:  patient5 / patient123');
     console.log('──────────────────────────────────────────────\n');
 
     process.exit(0);
