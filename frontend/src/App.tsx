@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider, useData } from './context/DataContext';
 import LoginPage from './pages/LoginPage';
+import WelcomePage from './pages/WelcomePage';
 import Layout from './components/Layout';
 import DashboardPage from './pages/DashboardPage';
 import StaffManagement from './pages/admin/StaffManagement';
@@ -18,6 +19,8 @@ function AppContent() {
   const { isAuthenticated } = useAuth();
   const { isLoading, error } = useData();
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -26,7 +29,19 @@ function AppContent() {
   }, [isAuthenticated]);
 
   if (!isAuthenticated) {
-    return <LoginPage onLogin={() => setCurrentPage('dashboard')} />;
+    if (showLogin) {
+      return <LoginPage 
+        initialMode={loginMode} 
+        onLogin={() => setCurrentPage('dashboard')} 
+        onBack={() => setShowLogin(false)} 
+      />;
+    }
+    return <WelcomePage 
+      onNavigate={(mode) => {
+        setLoginMode(mode);
+        setShowLogin(true);
+      }} 
+    />;
   }
 
   // Show loading spinner while fetching data from API

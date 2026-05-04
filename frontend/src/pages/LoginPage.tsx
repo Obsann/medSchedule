@@ -3,15 +3,17 @@ import { useAuth } from '../context/AuthContext';
 import { Shield, Heart, Eye, EyeOff, UserPlus, LogIn, Mail, User as UserIcon, KeyRound, ArrowLeft } from 'lucide-react';
 
 interface LoginPageProps {
+  initialMode?: Mode;
   onLogin: () => void;
+  onBack?: () => void;
 }
 
 type Mode = 'login' | 'register' | 'otp' | 'forgot-password' | 'reset-password';
 
-export default function LoginPage({ onLogin }: LoginPageProps) {
+export default function LoginPage({ initialMode = 'login', onLogin, onBack }: LoginPageProps) {
   const { staffLogin, patientLogin, patientRegister, verifyOTP, resendOTP, googleAuth, forgotPassword, resetPassword } = useAuth();
 
-  const [mode, setMode] = useState<Mode>('login');
+  const [mode, setMode] = useState<Mode>(initialMode);
 
   // Form state
   const [identifier, setIdentifier] = useState(''); // Used for Login (Email or Username)
@@ -290,7 +292,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
         {/* Right Side: Form */}
         <div className="p-8 lg:p-12 relative bg-white">
-          <div className="mb-8">
+          {onBack && (
+            <button onClick={onBack} className="absolute top-6 left-6 text-gray-400 hover:text-gray-600 flex items-center gap-1 text-sm font-medium transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
+          )}
+          <div className={`mb-8 ${onBack ? 'mt-6' : ''}`}>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
               {headings[mode].title}
             </h2>
