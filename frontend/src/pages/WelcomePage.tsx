@@ -73,10 +73,10 @@ export default function WelcomePage({ onNavigate }: WelcomePageProps) {
               <span>Modern Healthcare Management</span>
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-slate-900 leading-[1.1] mb-6">
-              <span>Simplifying</span> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">hospital schedules</span> <span>for everyone.</span>
+              <span>Simplifying</span>{' '}<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">hospital schedules</span>{' '}<span>for everyone</span>
             </h1>
             <p className="text-base md:text-lg lg:text-xl text-slate-600 leading-relaxed mb-8 max-w-lg md:max-w-xl">
-              <span>MedSchedule connects patients, doctors, and nurses through a seamless, real-time scheduling platform. Experience healthcare coordination without the wait</span>
+              <span>MedSchedule connects patients, doctors, and nurses through a seamless, real-time scheduling platform </span><span>Experience healthcare coordination without the wait</span>
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
