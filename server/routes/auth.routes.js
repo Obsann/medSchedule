@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const Staff = require('../models/Staff');
@@ -7,6 +8,40 @@ const Patient = require('../models/Patient');
 const { authenticate } = require('../middleware/auth');
 const sendEmail = require('../utils/sendEmail');
 const { verifyEmail } = require('../utils/emailValidator');
+
+// ─── OTP brute-force protection (in-memory, resets on server restart) ────────
+const otpAttempts = new Map(); // key: email, value: { count, lockedUntil }
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_LOCKOUT_MINUTES = 15;
+
+function checkOtpRateLimit(email) {
+  const key = email.toLowerCase().trim();
+  const record = otpAttempts.get(key);
+  if (!record) return { allowed: true };
+  if (record.lockedUntil && record.lockedUntil > Date.now()) {
+    const minsLeft = Math.ceil((record.lockedUntil - Date.now()) / 60000);
+    return { allowed: false, message: `Too many failed attempts. Try again in ${minsLeft} minute(s).` };
+  }
+  if (record.lockedUntil && record.lockedUntil <= Date.now()) {
+    otpAttempts.delete(key); // lock expired
+    return { allowed: true };
+  }
+  return { allowed: true };
+}
+
+function recordOtpFailure(email) {
+  const key = email.toLowerCase().trim();
+  const record = otpAttempts.get(key) || { count: 0 };
+  record.count += 1;
+  if (record.count >= OTP_MAX_ATTEMPTS) {
+    record.lockedUntil = Date.now() + OTP_LOCKOUT_MINUTES * 60 * 1000;
+  }
+  otpAttempts.set(key, record);
+}
+
+function clearOtpAttempts(email) {
+  otpAttempts.delete(email.toLowerCase().trim());
+}
 
 const router = express.Router();
 
@@ -78,6 +113,14 @@ router.post('/staff-login', async (req, res) => {
       });
     }
 
+    // Check email verification
+    if (user.isEmailVerified === false) {
+      return res.status(403).json({
+        status: 403,
+        message: 'Your account email has not been verified. Contact your administrator.',
+      });
+    }
+
     const token = signToken(user);
 
     res.json({
@@ -104,8 +147,13 @@ router.post('/patient/login', async (req, res) => {
       });
     }
 
+    const identifierLower = username.toLowerCase().trim();
+
     const user = await User.findOne({
-      username: username.toLowerCase().trim(),
+      $or: [
+        { username: identifierLower },
+        { email: identifierLower }
+      ],
       role: 'patient',
     }).select('+password');
 
@@ -210,8 +258,9 @@ router.post('/patient/register', async (req, res) => {
       }
     }
 
-    // Generate 6-digit OTP
+    // Generate 6-digit OTP and hash it before storing
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = await bcrypt.hash(otp, 10);
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     const user = await User.create({
@@ -222,7 +271,7 @@ router.post('/patient/register', async (req, res) => {
       role: 'patient',
       authProvider: 'local',
       isEmailVerified: false,
-      otp,
+      otp: otpHash,
       otpExpires,
     });
 
@@ -276,6 +325,12 @@ router.post('/patient/verify-otp', async (req, res) => {
       return res.status(400).json({ status: 400, message: 'Email and OTP are required' });
     }
 
+    // Brute-force check
+    const rateCheck = checkOtpRateLimit(email);
+    if (!rateCheck.allowed) {
+      return res.status(429).json({ status: 429, message: rateCheck.message });
+    }
+
     const user = await User.findOne({ email: email.toLowerCase().trim(), role: 'patient' });
 
     if (!user) {
@@ -286,15 +341,19 @@ router.post('/patient/verify-otp', async (req, res) => {
       return res.status(400).json({ status: 400, message: 'Email is already verified' });
     }
 
-    if (!user.otp || user.otp !== otp) {
-      return res.status(400).json({ status: 400, message: 'Invalid OTP code' });
-    }
-
     if (user.otpExpires < new Date()) {
       return res.status(400).json({ status: 400, message: 'OTP code has expired. Please request a new one.' });
     }
 
-    // Success - verify user
+    // Compare hashed OTP
+    const isOtpValid = user.otp ? await bcrypt.compare(otp, user.otp) : false;
+    if (!isOtpValid) {
+      recordOtpFailure(email);
+      return res.status(400).json({ status: 400, message: 'Invalid OTP code' });
+    }
+
+    // Success - verify user and clear OTP
+    clearOtpAttempts(email);
     user.isEmailVerified = true;
     user.otp = null;
     user.otpExpires = null;
@@ -334,10 +393,11 @@ router.post('/patient/resend-otp', async (req, res) => {
       return res.status(400).json({ status: 400, message: 'Email is already verified' });
     }
 
-    // Generate new OTP
+    // Generate new OTP and hash before storing
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.otp = otp;
+    user.otp = await bcrypt.hash(otp, 10);
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    clearOtpAttempts(email); // reset brute-force counter on resend
     await user.save();
 
     // Send email
@@ -511,9 +571,9 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    // Generate 6-digit OTP
+    // Generate 6-digit OTP and hash before storing
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.otp = otp;
+    user.otp = await bcrypt.hash(otp, 10);
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     await user.save();
 
@@ -560,21 +620,36 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ status: 400, message: 'Password must be at least 6 characters' });
     }
 
+    // Brute-force check
+    const rateCheck = checkOtpRateLimit(email);
+    if (!rateCheck.allowed) {
+      return res.status(429).json({ status: 429, message: rateCheck.message });
+    }
+
     const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
 
     if (!user) {
       return res.status(404).json({ status: 404, message: 'User not found' });
     }
 
-    if (!user.otp || user.otp !== otp) {
-      return res.status(400).json({ status: 400, message: 'Invalid reset code' });
+    // Block unverified accounts from using password reset to bypass email verification
+    if (user.isEmailVerified === false && user.authProvider === 'local') {
+      return res.status(403).json({ status: 403, message: 'Please verify your email first before resetting your password.' });
     }
 
     if (user.otpExpires < new Date()) {
       return res.status(400).json({ status: 400, message: 'Reset code has expired. Please request a new one.' });
     }
 
+    // Compare hashed OTP
+    const isOtpValid = user.otp ? await bcrypt.compare(otp, user.otp) : false;
+    if (!isOtpValid) {
+      recordOtpFailure(email);
+      return res.status(400).json({ status: 400, message: 'Invalid reset code' });
+    }
+
     // Set new password and clear OTP
+    clearOtpAttempts(email);
     user.password = newPassword;
     user.otp = null;
     user.otpExpires = null;

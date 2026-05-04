@@ -149,12 +149,19 @@ router.put('/me', async (req, res) => {
     // Update staff-specific fields
     if ((req.user.role === 'staff' || req.user.role === 'admin') && staffData) {
       if (req.user.staffId) {
-        const { _id, ...allowedStaffData } = staffData;
-        await Staff.findByIdAndUpdate(
-          req.user.staffId,
-          { $set: allowedStaffData },
-          { runValidators: true }
-        );
+        // Prevent privilege escalation — only allow non-sensitive fields
+        const { phone, specialization } = staffData;
+        const allowedStaffData = {};
+        if (phone !== undefined) allowedStaffData.phone = phone;
+        if (specialization !== undefined) allowedStaffData.specialization = specialization;
+        
+        if (Object.keys(allowedStaffData).length > 0) {
+          await Staff.findByIdAndUpdate(
+            req.user.staffId,
+            { $set: allowedStaffData },
+            { runValidators: true }
+          );
+        }
       } else {
         // Admin without a linked Staff record — create one
         const newStaff = await Staff.create({

@@ -11,7 +11,7 @@ router.use(authenticate);
 
 // ─── GET /api/staff ──────────────────────────────────────────────────────────
 // Supports filters: departmentId, role, status, search
-router.get('/', async (req, res) => {
+router.get('/', requireRole('admin', 'staff'), async (req, res) => {
   try {
     const { departmentId, role, status, search } = req.query;
     const filter = {};
@@ -51,7 +51,7 @@ router.get('/', async (req, res) => {
 });
 
 // ─── GET /api/staff/:id ──────────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireRole('admin', 'staff'), async (req, res) => {
   try {
     const item = await Staff.findById(req.params.id);
     if (!item) {

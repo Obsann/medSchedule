@@ -106,8 +106,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       let result;
 
       if (mode === 'login') {
-        // Automatically route to staff or patient auth based on whether it looks like an email
-        const isStaff = identifier.trim().includes('@');
+        // Route to staff auth ONLY if it uses the staff email domain, otherwise it's a patient (username or email)
+        const isStaff = identifier.toLowerCase().trim().endsWith('@medschedule.et');
         if (isStaff) {
           result = await staffLogin(identifier.trim(), password);
         } else {

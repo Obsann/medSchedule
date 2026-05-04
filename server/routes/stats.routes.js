@@ -2,14 +2,14 @@ const express = require('express');
 const Staff = require('../models/Staff');
 const Shift = require('../models/Shift');
 const Department = require('../models/Department');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.use(authenticate);
 
 // ─── GET /api/stats/dashboard ────────────────────────────────────────────────
-router.get('/dashboard', async (req, res) => {
+router.get('/dashboard', requireRole('admin', 'staff'), async (req, res) => {
   try {
     const [
       totalStaff,

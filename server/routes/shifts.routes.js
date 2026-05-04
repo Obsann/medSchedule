@@ -10,7 +10,7 @@ router.use(authenticate);
 
 // ─── GET /api/shifts ─────────────────────────────────────────────────────────
 // Supports filters: departmentId, staffId, date, status, shiftType
-router.get('/', async (req, res) => {
+router.get('/', requireRole('admin', 'staff'), async (req, res) => {
   try {
     const { departmentId, staffId, date, status, shiftType } = req.query;
     const filter = {};
