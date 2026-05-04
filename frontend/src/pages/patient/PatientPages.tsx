@@ -214,9 +214,10 @@ export function FindDoctor() {
   });
 
   const selected = selectedStaff ? staff.find(s => s.id === selectedStaff) : null;
+  const today = format(new Date(), 'yyyy-MM-dd');
   const selectedShifts = selectedStaff
-    ? shifts.filter(s => s.staffId === selectedStaff && s.date >= format(new Date(), 'yyyy-MM-dd') && s.status === 'scheduled')
-        .sort((a, b) => a.date.localeCompare(b.date))
+    ? shifts.filter(s => s.staffId === selectedStaff && s.date === today && s.status === 'scheduled')
+        .sort((a, b) => a.startTime.localeCompare(b.startTime))
     : [];
 
   const getDeptName = (id: string) => departments.find(d => d.id === id)?.name || 'N/A';
@@ -226,7 +227,7 @@ export function FindDoctor() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Find a Doctor</h1>
-        <p className="text-sm text-gray-500 mt-1">Search for doctors and nurses, view their upcoming schedules</p>
+        <p className="text-sm text-gray-500 mt-1">Search for doctors and nurses, view their today's schedules</p>
       </div>
 
       {/* Search */}
@@ -270,8 +271,8 @@ export function FindDoctor() {
                     <Stethoscope className={`w-6 h-6 ${s.role === 'doctor' ? 'text-blue-600' : 'text-teal-600'}`} />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{s.role === 'doctor' ? 'Dr. ' : ''}{s.firstName} {s.lastName}</h3>
-                    <p className="text-xs text-gray-500">{s.specialization}</p>
+                    <h3 className="font-semibold text-gray-900"><span>{s.role === 'doctor' ? 'Dr. ' : ''}{s.firstName} {s.lastName}</span></h3>
+                    <p className="text-xs text-gray-500"><span>{s.specialization}</span></p>
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
@@ -280,7 +281,7 @@ export function FindDoctor() {
                     <span style={{ color: getDeptColor(s.departmentId) }}>{getDeptName(s.departmentId)}</span>
                   </span>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.role === 'doctor' ? 'bg-blue-50 text-blue-700' : 'bg-teal-50 text-teal-700'}`}>
-                    {s.role}
+                    <span>{s.role}</span>
                   </span>
                 </div>
               </button>
@@ -301,36 +302,36 @@ export function FindDoctor() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
               <div className={`p-6 ${selected.role === 'doctor' ? 'bg-gradient-to-r from-blue-50 to-blue-100' : 'bg-gradient-to-r from-teal-50 to-teal-100'}`}>
                 <div className={`w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold text-white ${selected.role === 'doctor' ? 'bg-blue-500' : 'bg-teal-500'}`}>
-                  {selected.firstName[0]}{selected.lastName[0]}
+                  <span>{selected.firstName[0]}{selected.lastName[0]}</span>
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 text-center mt-3">
-                  {selected.role === 'doctor' ? 'Dr. ' : ''}{selected.firstName} {selected.lastName}
+                  <span>{selected.role === 'doctor' ? 'Dr. ' : ''}{selected.firstName} {selected.lastName}</span>
                 </h3>
-                <p className="text-sm text-gray-600 text-center">{selected.specialization}</p>
+                <p className="text-sm text-gray-600 text-center"><span>{selected.specialization}</span></p>
               </div>
               <div className="p-4 space-y-2">
                 <p className="text-sm text-gray-600 flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-gray-400" /> {getDeptName(selected.departmentId)}
+                  <Building2 className="w-4 h-4 text-gray-400" /> <span>{getDeptName(selected.departmentId)}</span>
                 </p>
-                <p className="text-sm text-gray-600">📧 {selected.email}</p>
-                <p className="text-sm text-gray-600">📞 {selected.phone}</p>
+                <p className="text-sm text-gray-600 flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4 text-gray-400" /> <span className="capitalize">{selected.role}</span>
+                </p>
               </div>
               <div className="border-t border-gray-100 p-4">
-                <h4 className="font-semibold text-gray-900 text-sm mb-3">Upcoming Shifts</h4>
+                <h4 className="font-semibold text-gray-900 text-sm mb-3"><span>Today's Schedule</span></h4>
                 {selectedShifts.length > 0 ? (
                   <div className="space-y-2">
-                    {selectedShifts.slice(0, 7).map(shift => (
+                    {selectedShifts.map(shift => (
                       <div key={shift.id} className="flex items-center gap-2 text-sm">
-                        <span className="text-xs text-gray-400 w-16">{format(parseISO(shift.date), 'MMM dd')}</span>
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold capitalize ${simpleShiftColors[shift.shiftType]}`}>
-                          {shift.shiftType}
+                          <span>{shift.shiftType}</span>
                         </span>
-                        <span className="text-xs text-gray-500">{shift.startTime}-{shift.endTime}</span>
+                        <span className="text-xs text-gray-500"><span>{shift.startTime}</span>-<span>{shift.endTime}</span></span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-400">No upcoming shifts</p>
+                  <p className="text-sm text-gray-400"><span>No shifts scheduled for today</span></p>
                 )}
               </div>
             </div>
