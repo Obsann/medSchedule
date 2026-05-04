@@ -650,14 +650,11 @@ function PatientDashboard({ onNavigate }: { onNavigate: (page: string) => void }
                   </div>
                   <button 
                     onClick={() => {
-                      if (staffMember?.phone) {
-                        navigator.clipboard.writeText(staffMember.phone);
-                        addToast(`Copied ${staffMember.phone} to clipboard`, 'success');
-                      } else {
-                        addToast('No phone number available', 'error');
-                      }
+                      const secretaryPhone = '+251471119267';
+                      navigator.clipboard.writeText(secretaryPhone);
+                      addToast('You have copied the medical secretary phone number', 'success');
                     }}
-                    className="p-2 rounded-lg hover:bg-green-50 text-green-600" title="Available now"
+                    className="p-2 rounded-lg hover:bg-green-50 text-green-600" title="Call Medical Secretary"
                   >
                     <PhoneCall className="w-4 h-4" />
                   </button>

@@ -94,6 +94,15 @@ router.post('/', requireRole('admin'), async (req, res) => {
       });
     }
 
+    // Enforce staff email domain
+    const staffDomain = (process.env.STAFF_EMAIL_DOMAIN || 'medSchedule.et').toLowerCase();
+    if (!email.toLowerCase().trim().endsWith('@' + staffDomain)) {
+      return res.status(422).json({
+        status: 422,
+        message: `Staff email must use the @${staffDomain} domain`,
+      });
+    }
+
     if (!password || password.length < 6) {
       return res.status(422).json({
         status: 422,
