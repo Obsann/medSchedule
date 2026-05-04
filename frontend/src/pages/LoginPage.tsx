@@ -436,9 +436,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
             <button type="submit" disabled={isLoading} className="w-full py-3 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-70 flex items-center justify-center gap-2 animate-fade-up shadow-blue-500/25 shadow-lg" style={{ animationDelay: mode === 'login' ? '0.2s' : '0.4s' }}>
               {isLoading ? (
-                <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
+                <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> <span>Processing...</span></>
               ) : (
-                <>{buttonConfig[mode].icon} {buttonConfig[mode].label}</>
+                <>{buttonConfig[mode].icon} <span>{buttonConfig[mode].label}</span></>
               )}
             </button>
             
@@ -446,7 +446,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             {mode === 'otp' && (
               <div className="text-center mt-4">
                 <button type="button" onClick={handleResendOTP} disabled={isLoading} className="text-sm font-semibold text-blue-600 hover:underline disabled:opacity-50">
-                  Didn't receive code? Resend
+                  <span>Didn't receive code? Resend</span>
                 </button>
               </div>
             )}
