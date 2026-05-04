@@ -69,12 +69,12 @@ export default function LoginPage({ initialMode = 'login', onLogin, onBack }: Lo
     // Teleport the Google Translate widget from the body into the header
     const translateWidget = document.getElementById('google_translate_element');
     const headerTarget = document.getElementById('google_translate_header_target');
-    
+
     if (translateWidget && headerTarget) {
       translateWidget.style.position = 'static';
       headerTarget.appendChild(translateWidget);
     }
-    
+
     return () => {
       // Put it back to the body when component unmounts
       if (translateWidget) {
@@ -335,7 +335,7 @@ export default function LoginPage({ initialMode = 'login', onLogin, onBack }: Lo
                 <div className="animate-fade-up">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Reset Code</label>
                   <input type="text" value={otp} onChange={e => setOtp(e.target.value)} className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-900" placeholder="------" maxLength={6} required />
-                  <p className="text-sm text-gray-500 mt-3 text-center">Code sent to {email}</p>
+                  <p className="text-sm text-gray-500 mt-3 text-center">Code sent to {email}, but if signed in with google previously reset password through google.</p>
                 </div>
 
                 <div className="animate-fade-up" style={{ animationDelay: '0.1s' }}>
@@ -448,7 +448,7 @@ export default function LoginPage({ initialMode = 'login', onLogin, onBack }: Lo
                 <>{buttonConfig[mode].icon} <span>{buttonConfig[mode].label}</span></>
               )}
             </button>
-            
+
             {/* Resend OTP for email verification */}
             {mode === 'otp' && (
               <div className="text-center mt-4">
@@ -491,7 +491,7 @@ export default function LoginPage({ initialMode = 'login', onLogin, onBack }: Lo
               </button>
             </div>
           )}
-          
+
           {/* Back to Login — for OTP, Forgot Password, Reset Password */}
           {(mode === 'otp' || mode === 'forgot-password' || mode === 'reset-password') && (
             <div className="mt-8 text-center text-sm text-gray-600 animate-fade-up">
