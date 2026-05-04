@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Heart, CalendarDays, Users, ArrowRight, Activity, ShieldCheck, Clock, MapPin } from 'lucide-react';
 
 interface WelcomePageProps {
@@ -5,17 +6,39 @@ interface WelcomePageProps {
 }
 
 export default function WelcomePage({ onNavigate }: WelcomePageProps) {
+  useEffect(() => {
+    // Teleport the Google Translate widget from the body into the header
+    const translateWidget = document.getElementById('google_translate_element');
+    const headerTarget = document.getElementById('google_translate_header_target');
+    
+    if (translateWidget && headerTarget) {
+      translateWidget.style.position = 'static';
+      headerTarget.appendChild(translateWidget);
+    }
+    
+    return () => {
+      // Put it back to the body when component unmounts
+      if (translateWidget) {
+        translateWidget.style.position = 'fixed';
+        translateWidget.style.bottom = '16px';
+        translateWidget.style.left = '16px';
+        document.body.appendChild(translateWidget);
+      }
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-teal-500 selection:text-white">
       {/* Navbar */}
-      <nav className="absolute top-0 left-0 right-0 z-50 px-6 py-6 lg:px-12 flex justify-between items-center backdrop-blur-sm bg-white/10 border-b border-white/10">
+      <nav className="absolute top-0 left-0 right-0 z-50 px-4 py-4 md:px-6 md:py-6 lg:px-12 flex justify-between items-center backdrop-blur-sm bg-white/10 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
             <Heart className="w-6 h-6 text-white" />
           </div>
           <span className="text-2xl font-bold tracking-tight text-slate-900 drop-shadow-sm">MedSchedule</span>
         </div>
-        <div className="flex gap-4">
+        <div className="flex items-center gap-4">
+          <div id="google_translate_header_target" className="hidden sm:block"></div>
           <button 
             onClick={() => onNavigate('login')}
             className="px-6 py-2.5 text-slate-900 font-semibold hover:text-teal-600 transition-colors"
@@ -49,24 +72,24 @@ export default function WelcomePage({ onNavigate }: WelcomePageProps) {
               <Activity className="w-4 h-4" />
               <span>Modern Healthcare Management</span>
             </div>
-            <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-slate-900 leading-[1.1] mb-6">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-slate-900 leading-[1.1] mb-6">
               Simplifying <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">hospital schedules</span> for everyone.
             </h1>
-            <p className="text-lg lg:text-xl text-slate-600 leading-relaxed mb-8 max-w-xl">
+            <p className="text-base md:text-lg lg:text-xl text-slate-600 leading-relaxed mb-8 max-w-lg md:max-w-xl">
               MedSchedule connects patients, doctors, and nurses through a seamless, real-time scheduling platform. Experience healthcare coordination without the wait.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
               <button 
                 onClick={() => onNavigate('register')}
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-teal-500 text-white text-lg font-semibold rounded-full shadow-lg hover:shadow-2xl transition-all hover:-translate-y-1 flex items-center justify-center gap-2 group"
+                className="px-6 py-3 md:px-8 md:py-4 bg-gradient-to-r from-blue-600 to-teal-500 text-white text-base md:text-lg font-semibold rounded-full shadow-lg hover:shadow-2xl transition-all hover:-translate-y-1 flex items-center justify-center gap-2 group"
               >
                 Register as Patient
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
               <button 
                 onClick={() => onNavigate('login')}
-                className="px-8 py-4 bg-white text-slate-900 text-lg font-semibold rounded-full shadow-md border border-slate-100 hover:shadow-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
+                className="px-6 py-3 md:px-8 md:py-4 bg-white text-slate-900 text-base md:text-lg font-semibold rounded-full shadow-md border border-slate-100 hover:shadow-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
               >
                 Staff Portal
               </button>
