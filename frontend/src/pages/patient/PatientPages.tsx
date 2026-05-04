@@ -7,8 +7,8 @@ export function PatientScheduleViewer() {
   const { shifts, staff, departments } = useData();
   const [filterDept, setFilterDept] = useState('all');
   const [filterType, setFilterType] = useState<string>('all');
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const [selectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const viewMode = 'day';
 
   const shiftColors: Record<string, { bg: string; text: string; border: string }> = {
     morning: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
@@ -30,10 +30,7 @@ export function PatientScheduleViewer() {
     return true;
   }).sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-  const adjustDate = (days: number) => {
-    const d = parseISO(selectedDate);
-    setSelectedDate(format(addDays(d, days), 'yyyy-MM-dd'));
-  };
+  // Date adjustment removed for patients - strictly "Today"
 
   return (
     <div className="space-y-6">
@@ -45,21 +42,11 @@ export function PatientScheduleViewer() {
       {/* Controls */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
         <div className="flex flex-col sm:flex-row gap-3">
-          {viewMode === 'day' && (
-            <div className="flex items-center gap-2">
-              <button onClick={() => adjustDate(-1)} className="p-2 rounded-lg hover:bg-gray-100"><ChevronLeft className="w-5 h-5" /></button>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-purple-500"
-              />
-              <button onClick={() => adjustDate(1)} className="p-2 rounded-lg hover:bg-gray-100"><ChevronRight className="w-5 h-5" /></button>
-              {selectedDate !== format(new Date(), 'yyyy-MM-dd') && (
-                <button onClick={() => setSelectedDate(format(new Date(), 'yyyy-MM-dd'))} className="px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100">Today</button>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <span className="px-4 py-2 rounded-xl bg-purple-50 text-purple-700 font-medium text-sm border border-purple-100">
+              Today's Schedule ({format(new Date(), 'MMM dd, yyyy')})
+            </span>
+          </div>
           <div className="flex gap-2 flex-wrap flex-1">
             <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className="px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-purple-500 bg-white">
               <option value="all">All Departments</option>
@@ -71,10 +58,6 @@ export function PatientScheduleViewer() {
               <option value="afternoon">Afternoon</option>
               <option value="night">Night</option>
             </select>
-            <div className="flex rounded-xl border border-gray-200 overflow-hidden">
-              <button onClick={() => setViewMode('day')} className={`px-4 py-2 text-sm font-medium ${viewMode === 'day' ? 'bg-purple-100 text-purple-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Day</button>
-              <button onClick={() => setViewMode('week')} className={`px-4 py-2 text-sm font-medium ${viewMode === 'week' ? 'bg-purple-100 text-purple-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>Week</button>
-            </div>
           </div>
         </div>
       </div>
@@ -123,15 +106,15 @@ function DayView({ shifts, staff, departments, selectedDate, shiftColors }: any)
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-900">
-        {format(parseISO(selectedDate), 'EEEE, MMMM dd, yyyy')}
-        <span className="text-sm text-gray-500 font-normal ml-2">({shifts.length} shifts)</span>
+        <span>{format(parseISO(selectedDate), 'EEEE, MMMM dd, yyyy')}</span>
+        <span className="text-sm text-gray-500 font-normal ml-2">(<span>{shifts.length}</span> shifts)</span>
       </h2>
       {Object.values(grouped).map(({ department, shifts: deptShifts }: any) => (
         <div key={department?.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: department?.color || '#6B7280' }} />
-            <h3 className="font-semibold text-gray-900">{department?.name || 'Unknown'}</h3>
-            <span className="text-xs text-gray-500">({deptShifts.length} shifts)</span>
+            <h3 className="font-semibold text-gray-900"><span>{department?.name || 'Unknown'}</span></h3>
+            <span className="text-xs text-gray-500">(<span>{deptShifts.length}</span> shifts)</span>
           </div>
           <div className="divide-y divide-gray-50">
             {deptShifts.map((shift: any) => {
@@ -152,7 +135,7 @@ function DayView({ shifts, staff, departments, selectedDate, shiftColors }: any)
                     <p className="text-xs text-gray-500">{s?.specialization}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-mono text-gray-700">{shift.startTime} - {shift.endTime}</p>
+                    <p className="text-sm font-mono text-gray-700"><span>{shift.startTime}</span> - <span>{shift.endTime}</span></p>
                   </div>
                 </div>
               );

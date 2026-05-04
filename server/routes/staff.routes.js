@@ -11,7 +11,7 @@ router.use(authenticate);
 
 // ─── GET /api/staff ──────────────────────────────────────────────────────────
 // Supports filters: departmentId, role, status, search
-router.get('/', requireRole('admin', 'staff'), async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { departmentId, role, status, search } = req.query;
     const filter = {};
@@ -30,13 +30,15 @@ router.get('/', requireRole('admin', 'staff'), async (req, res) => {
 
     const items = await Staff.find(filter).sort({ firstName: 1 });
 
+    const isPatient = req.user.role === 'patient';
+
     // Map _id to id for frontend compatibility
     const data = items.map(s => ({
       id: s._id,
       firstName: s.firstName,
       lastName: s.lastName,
-      email: s.email,
-      phone: s.phone,
+      email: isPatient ? undefined : s.email,
+      phone: isPatient ? undefined : s.phone,
       role: s.role,
       departmentId: s.departmentId,
       specialization: s.specialization,
@@ -51,12 +53,14 @@ router.get('/', requireRole('admin', 'staff'), async (req, res) => {
 });
 
 // ─── GET /api/staff/:id ──────────────────────────────────────────────────────
-router.get('/:id', requireRole('admin', 'staff'), async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const item = await Staff.findById(req.params.id);
     if (!item) {
       return res.status(404).json({ status: 404, message: 'Staff not found' });
     }
+
+    const isPatient = req.user.role === 'patient';
 
     res.json({
       status: 200,
@@ -64,8 +68,8 @@ router.get('/:id', requireRole('admin', 'staff'), async (req, res) => {
         id: item._id,
         firstName: item.firstName,
         lastName: item.lastName,
-        email: item.email,
-        phone: item.phone,
+        email: isPatient ? undefined : item.email,
+        phone: isPatient ? undefined : item.phone,
         role: item.role,
         departmentId: item.departmentId,
         specialization: item.specialization,
