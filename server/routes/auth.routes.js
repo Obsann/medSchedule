@@ -297,11 +297,21 @@ router.post('/patient/register', async (req, res) => {
     `;
 
     // Send the OTP via email
-    await sendEmail({
+    const emailSent = await sendEmail({
       to: user.email,
       subject: 'medSchedule - Email Verification Code',
       html: emailHtml,
     });
+
+    if (!emailSent) {
+      // Rollback user creation if email fails
+      await User.findByIdAndDelete(user._id);
+      await Patient.findByIdAndDelete(patient._id);
+      return res.status(500).json({
+        status: 500,
+        message: 'Failed to send verification email. Please try again later or check if the email address is correct.',
+      });
+    }
 
     res.status(201).json({
       status: 201,
