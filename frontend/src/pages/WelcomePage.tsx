@@ -31,23 +31,23 @@ export default function WelcomePage({ onNavigate }: WelcomePageProps) {
     <div className="min-h-screen bg-white font-sans selection:bg-teal-500 selection:text-white">
       {/* Navbar */}
       <nav className="absolute top-0 left-0 right-0 z-50 px-4 py-4 md:px-6 md:py-6 lg:px-12 flex justify-between items-center backdrop-blur-sm bg-white/10 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
-            <Heart className="w-6 h-6 text-white" />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
+            <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
-          <span className="text-2xl font-bold tracking-tight text-slate-900 drop-shadow-sm">MedSchedule</span>
+          <span className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 drop-shadow-sm">MedSchedule</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <div id="google_translate_header_target" className="hidden sm:block"></div>
           <button
             onClick={() => onNavigate('login')}
-            className="px-6 py-2.5 text-slate-900 font-semibold hover:text-teal-600 transition-colors"
+            className="px-4 py-2 sm:px-6 sm:py-2.5 text-slate-900 font-semibold hover:text-teal-600 transition-colors"
           >
             <span>Sign In</span>
           </button>
           <button
             onClick={() => onNavigate('register')}
-            className="px-6 py-2.5 bg-slate-900 text-white font-semibold rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl transition-all hover:-translate-y-0.5"
+            className="hidden sm:block px-4 py-2 sm:px-6 sm:py-2.5 bg-slate-900 text-white text-sm sm:text-base font-semibold rounded-full shadow-lg hover:bg-slate-800 hover:shadow-xl transition-all hover:-translate-y-0.5"
           >
             <span>Get Started</span>
           </button>
@@ -95,7 +95,7 @@ export default function WelcomePage({ onNavigate }: WelcomePageProps) {
               </button>
             </div>
 
-            <div className="mt-12 flex items-center gap-8 text-sm text-slate-500 font-medium">
+            <div className="mt-8 md:mt-12 flex flex-wrap items-center gap-4 sm:gap-8 text-sm text-slate-500 font-medium">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-teal-500" /> <span>Secure Data</span>
               </div>
