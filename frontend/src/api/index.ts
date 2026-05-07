@@ -55,9 +55,9 @@ export function decodeToken(token: string) {
 }
 
 // ─── Base Fetch Wrapper ──────────────────────────────────────────────────────
-// Hard 20-second timeout — prevents the UI from hanging on "Processing..."
-// if the backend is slow or unresponsive.
-const FETCH_TIMEOUT_MS = 20_000;
+// Hard 45-second timeout — Render free tier cold starts can take 30-50s.
+// Prevents the UI from hanging forever but gives enough room for wakeup + email.
+const FETCH_TIMEOUT_MS = 45_000;
 
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
   const token = getSavedToken();
