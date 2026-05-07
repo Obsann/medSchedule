@@ -238,24 +238,68 @@ router.post('/patient/register', async (req, res) => {
       });
     }
 
-    // Check if username already taken
-    const existingUsername = await User.findOne({ username: username.toLowerCase().trim() });
-    if (existingUsername) {
+    const emailKey = email.toLowerCase().trim();
+    const usernameKey = username.toLowerCase().trim();
+
+    // Block only VERIFIED duplicates — those are real conflicts
+    const verifiedByEmail = await User.findOne({ email: emailKey, isEmailVerified: true });
+    if (verifiedByEmail) {
       return res.status(409).json({
         status: 409,
-        message: 'Username is already taken',
+        message: 'An account with this email already exists. Please log in instead.',
       });
     }
 
-    // Check if email already used (if provided)
-    if (email) {
-      const existingEmail = await User.findOne({ email: email.toLowerCase().trim() });
-      if (existingEmail) {
-        return res.status(409).json({
-          status: 409,
-          message: 'An account with this email already exists',
+    const verifiedByUsername = await User.findOne({ username: usernameKey, isEmailVerified: true });
+    if (verifiedByUsername) {
+      return res.status(409).json({
+        status: 409,
+        message: 'Username is already taken. Please choose a different one.',
+      });
+    }
+
+    // ── Orphaned unverified account? Resend OTP instead of blocking ────────
+    // This handles accounts created by previous requests that timed out on Render
+    // before the email could be sent (old deep-email-validator MX hang bug).
+    const existingUnverified = await User.findOne({ email: emailKey, isEmailVerified: false });
+    if (existingUnverified) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      existingUnverified.otp = await bcrypt.hash(otp, 10);
+      existingUnverified.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      existingUnverified.name = name.trim();
+      existingUnverified.password = password; // pre-save hook hashes this
+      await existingUnverified.save();
+
+      const resendHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+          <h2 style="color: #2563eb; margin-bottom: 20px;">Verify your medSchedule Account</h2>
+          <p style="font-size: 16px; color: #4b5563;">Hello ${name.trim()},</p>
+          <p style="font-size: 16px; color: #4b5563;">A new verification code has been generated. Please use the following 6-digit code — it expires in 10 minutes.</p>
+          <div style="background-color: #f3f4f6; padding: 15px; text-align: center; border-radius: 6px; margin: 25px 0;">
+            <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #111827;">${otp}</span>
+          </div>
+          <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">If you didn't create this account, you can safely ignore this email.</p>
+        </div>
+      `;
+
+      const sent = await sendEmail({
+        to: emailKey,
+        subject: 'medSchedule - Email Verification Code',
+        html: resendHtml,
+      });
+
+      if (!sent) {
+        return res.status(500).json({
+          status: 500,
+          message: 'Failed to send verification email. Please try again later.',
         });
       }
+
+      return res.status(201).json({
+        status: 201,
+        message: 'Verification code resent to your email.',
+        data: { email: emailKey },
+      });
     }
 
     // Generate 6-digit OTP and hash it before storing
@@ -263,9 +307,10 @@ router.post('/patient/register', async (req, res) => {
     const otpHash = await bcrypt.hash(otp, 10);
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+    // ── Fresh registration ──────────────────────────────────────────────────
     const user = await User.create({
-      username: username.toLowerCase().trim(),
-      email: email.toLowerCase().trim(),
+      username: usernameKey,
+      email: emailKey,
       password,
       name: name.trim(),
       role: 'patient',
