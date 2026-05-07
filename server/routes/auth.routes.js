@@ -282,22 +282,17 @@ router.post('/patient/register', async (req, res) => {
         </div>
       `;
 
-      const sent = await sendEmail({
+      // Fire-and-forget: send email in background, respond immediately.
+      // If email fails, user can click "Resend OTP" on the verification screen.
+      sendEmail({
         to: emailKey,
         subject: 'medSchedule - Email Verification Code',
         html: resendHtml,
-      });
-
-      if (!sent) {
-        return res.status(500).json({
-          status: 500,
-          message: 'Failed to send verification email. Please try again later.',
-        });
-      }
+      }).catch(err => console.error('Background OTP email failed:', err));
 
       return res.status(201).json({
         status: 201,
-        message: 'Verification code resent to your email.',
+        message: 'Verification code sent to your email.',
         data: { email: emailKey },
       });
     }
@@ -341,27 +336,18 @@ router.post('/patient/register', async (req, res) => {
       </div>
     `;
 
-    // Send the OTP via email
-    const emailSent = await sendEmail({
+    // Fire-and-forget: send email in background, respond immediately.
+    // If email fails, user can click "Resend OTP" on the verification screen.
+    sendEmail({
       to: user.email,
       subject: 'medSchedule - Email Verification Code',
       html: emailHtml,
-    });
-
-    if (!emailSent) {
-      // Rollback user creation if email fails
-      await User.findByIdAndDelete(user._id);
-      await Patient.findByIdAndDelete(patient._id);
-      return res.status(500).json({
-        status: 500,
-        message: 'Failed to send verification email. Please try again later or check if the email address is correct.',
-      });
-    }
+    }).catch(err => console.error('Background OTP email failed:', err));
 
     res.status(201).json({
       status: 201,
-      message: 'Registration successful. Please verify your email with the OTP sent to you.',
-      data: { email: user.email }, // Do NOT send token yet
+      message: 'Registration successful. Please check your email for the verification code.',
+      data: { email: user.email },
     });
   } catch (error) {
     console.error('Patient register error:', error);
@@ -467,11 +453,12 @@ router.post('/patient/resend-otp', async (req, res) => {
       </div>
     `;
 
-    await sendEmail({
+    // Fire-and-forget: respond immediately, email sends in background
+    sendEmail({
       to: user.email,
       subject: 'medSchedule - New Verification Code',
       html: emailHtml,
-    });
+    }).catch(err => console.error('Background resend-OTP email failed:', err));
 
     res.json({
       status: 200,
@@ -644,11 +631,12 @@ router.post('/forgot-password', async (req, res) => {
       </div>
     `;
 
-    await sendEmail({
+    // Fire-and-forget: respond immediately, email sends in background
+    sendEmail({
       to: user.email,
       subject: 'medSchedule - Password Reset Code',
       html: emailHtml,
-    });
+    }).catch(err => console.error('Background reset email failed:', err));
 
     res.json({
       status: 200,
