@@ -40,6 +40,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// ─── Env Diagnostics (shows which vars are set, never their values) ──────────
+app.get('/api/health/env', (req, res) => {
+  res.json({
+    SMTP_SERVICE: process.env.SMTP_SERVICE ? '✅ set' : '❌ MISSING',
+    SMTP_USER: process.env.SMTP_USER ? '✅ set' : '❌ MISSING',
+    SMTP_PASS: process.env.SMTP_PASS ? '✅ set' : '❌ MISSING',
+    MONGODB_URI: process.env.MONGODB_URI ? '✅ set' : '❌ MISSING',
+    JWT_SECRET: process.env.JWT_SECRET ? '✅ set' : '❌ MISSING',
+    NODE_ENV: process.env.NODE_ENV || 'not set',
+  });
+});
+
 // ─── 404 Handler ────────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ status: 404, message: `Route ${req.method} ${req.originalUrl} not found` });
