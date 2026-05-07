@@ -1,47 +1,31 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 /**
- * Send an email using configured SMTP settings.
- * Relies on process.env.SMTP_USER and process.env.SMTP_PASS
- *
- * Gmail App Passwords are displayed with spaces in the Google UI,
- * but must be sent without spaces — we strip them automatically.
- *
- * Hard timeout of 15 s prevents this from hanging the entire request.
+ * Send an email using the Resend API (HTTP-based, not blocked by cloud hosts).
+ * Requires process.env.RESEND_API_KEY
  */
-const SEND_TIMEOUT_MS = 15000;
-
 const sendEmail = async ({ to, subject, html }) => {
   try {
-    // Strip spaces from app password (Google UI shows them with spaces)
-    const smtpPass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
-    const transporter = nodemailer.createTransport({
-      service: process.env.SMTP_SERVICE || 'gmail',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: smtpPass,
-      },
-      connectionTimeout: SEND_TIMEOUT_MS,
-      greetingTimeout: SEND_TIMEOUT_MS,
-      socketTimeout: SEND_TIMEOUT_MS,
-    });
+    // Resend requires a verified domain to send FROM.
+    // During testing, you can send emails TO your own email address 
+    // using the default 'onboarding@resend.dev' sender.
+    const sender = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
-    const mailOptions = {
-      from: `medSchedule <${process.env.SMTP_USER}>`,
-      to,
+    const { data, error } = await resend.emails.send({
+      from: `medSchedule <${sender}>`,
+      to: [to],
       subject,
       html,
-    };
+    });
 
-    // Race against a hard timeout so we never block a request indefinitely
-    const sendPromise = transporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Email send timed out after 15s')), SEND_TIMEOUT_MS)
-    );
+    if (error) {
+      console.error('Resend API error:', error);
+      return false;
+    }
 
-    const info = await Promise.race([sendPromise, timeoutPromise]);
-    console.log(`Email sent to ${to} [MessageId: ${info.messageId}]`);
+    console.log(`Email sent to ${to} [MessageId: ${data?.id}]`);
     return true;
   } catch (error) {
     console.error('Email send failed:', error.message || error);
