@@ -55,6 +55,10 @@ export function decodeToken(token: string) {
 }
 
 // ─── Base Fetch Wrapper ──────────────────────────────────────────────────────
+// Hard 20-second timeout — prevents the UI from hanging on "Processing..."
+// if the backend is slow or unresponsive.
+const FETCH_TIMEOUT_MS = 20_000;
+
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
   const token = getSavedToken();
   const headers: Record<string, string> = {
@@ -66,20 +70,33 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
   try {
     const res = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
       headers,
+      signal: controller.signal,
     });
-    
+
     const data = await res.json();
     return data;
   } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return {
+        status: 504,
+        data: null as any,
+        message: 'Request timed out. The server took too long to respond. Please try again.',
+      };
+    }
     return {
       status: 500,
       data: null as any,
       message: err instanceof Error ? err.message : 'Network error while reaching the server',
     };
+  } finally {
+    clearTimeout(timer);
   }
 }
 

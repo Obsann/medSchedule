@@ -1,47 +1,46 @@
-const { validate } = require('deep-email-validator');
-
 /**
- * Verify an email address using deep-email-validator.
- * Checks: regex, typo, disposable domain, MX records.
- * SMTP check is disabled (many providers block it, causing false negatives).
+ * Fast, synchronous email validation.
+ * - Validates format via regex
+ * - Blocks known disposable/throwaway email domains
+ * No network calls — avoids DNS/MX hangs on cloud hosts.
  *
- * Returns { valid: boolean, reason?: string, message: string }
+ * Returns { valid: boolean, message: string }
  */
-async function verifyEmail(email) {
-  try {
-    const result = await validate({
-      email,
-      validateRegex: true,
-      validateMx: true, // Strictly check if domain exists and can receive emails
-      validateTypo: true,
-      validateDisposable: true,
-      validateSMTP: false, // Disabled — too many false negatives from firewall/cloud hosts
-    });
 
-    if (result.valid) {
-      return { valid: true, message: 'Email accepted.' };
-    }
+const DISPOSABLE_DOMAINS = new Set([
+  'mailinator.com', 'guerrillamail.com', 'tempmail.com', 'throwam.com',
+  'sharklasers.com', 'guerrillamailblock.com', 'grr.la', 'guerrillamail.info',
+  'guerrillamail.biz', 'guerrillamail.de', 'guerrillamail.net', 'guerrillamail.org',
+  'spam4.me', 'trashmail.com', 'trashmail.me', 'trashmail.net', 'dispostable.com',
+  'yopmail.com', 'yopmail.fr', 'cool.fr.nf', 'jetable.fr.nf', 'nospam.ze.tc',
+  'nomail.xl.cx', 'mega.zik.dj', 'speed.1s.fr', 'courriel.fr.nf', 'moncourrier.fr.nf',
+  'monemail.fr.nf', 'monmail.fr.nf', 'maildrop.cc', 'mailnull.com', 'spamgourmet.com',
+  'tempinbox.com', 'fakeinbox.com', 'mailcatch.com', 'discard.email', 'spamfree24.org',
+  'throwaway.email', 'getnada.com', 'mailnesia.com', 'mailnull.com',
+]);
 
-    // Build a human-friendly message based on the failure reason
-    const reason = result.reason || 'unknown';
-    const messages = {
-      regex: 'The email address format is invalid.',
-      typo: 'Invalid email address.',
-      disposable: 'Disposable/temporary email addresses are not allowed. Please use a real email.',
-      mx: 'The email domain does not exist or cannot receive emails.',
-      smtp: 'The email mailbox could not be verified.',
-    };
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 
+function verifyEmail(email) {
+  if (!email || typeof email !== 'string') {
+    return { valid: false, message: 'Email address is required.' };
+  }
+
+  const trimmed = email.trim().toLowerCase();
+
+  if (!EMAIL_REGEX.test(trimmed)) {
+    return { valid: false, message: 'The email address format is invalid.' };
+  }
+
+  const domain = trimmed.split('@')[1];
+  if (DISPOSABLE_DOMAINS.has(domain)) {
     return {
       valid: false,
-      reason,
-      message: messages[reason] || 'The provided email address could not be verified.',
+      message: 'Disposable/temporary email addresses are not allowed. Please use a real email.',
     };
-  } catch (error) {
-    // If the validator itself errors, fail open — don't block registration
-    console.error('[EmailValidator] Verification error:', error.message || error);
-    return { valid: true, message: 'Verification service unavailable — allowing email.' };
   }
+
+  return { valid: true, message: 'Email accepted.' };
 }
 
 module.exports = { verifyEmail };

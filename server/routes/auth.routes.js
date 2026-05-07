@@ -229,8 +229,8 @@ router.post('/patient/register', async (req, res) => {
       });
     }
 
-    // ── ZeroBounce email verification ──
-    const zbResult = await verifyEmail(email);
+    // ── Email format + disposable domain check (fast, no network calls) ──
+    const zbResult = verifyEmail(email);
     if (!zbResult.valid) {
       return res.status(400).json({
         status: 400,
