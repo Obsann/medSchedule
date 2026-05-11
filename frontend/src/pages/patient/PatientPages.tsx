@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { format, parseISO, startOfWeek, addDays } from 'date-fns';
 import { Search, CalendarDays, Clock, Building2, Stethoscope, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
-
-export function PatientScheduleViewer() {
+import { format12Hour } from '../../utils/timeFormat';
   const { shifts, staff, departments } = useData();
   const [filterDept, setFilterDept] = useState('all');
   const [filterType, setFilterType] = useState<string>('all');
@@ -65,9 +64,9 @@ export function PatientScheduleViewer() {
       {/* Legend */}
       <div className="flex gap-3 flex-wrap">
         {[
-          { type: 'morning', label: 'Morning (07:00-13:00)' },
-          { type: 'afternoon', label: 'Afternoon (13:00-19:00)' },
-          { type: 'night', label: 'Night (19:00-07:00)' },
+          { type: 'morning', label: 'Morning (07:00 AM-01:00 PM)' },
+          { type: 'afternoon', label: 'Afternoon (01:00 PM-07:00 PM)' },
+          { type: 'night', label: 'Night (07:00 PM-07:00 AM)' },
         ].map(s => (
           <div key={s.type} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${shiftColors[s.type].bg} ${shiftColors[s.type].border}`}>
             <Clock className={`w-4 h-4 ${shiftColors[s.type].text}`} />
@@ -135,7 +134,7 @@ function DayView({ shifts, staff, departments, selectedDate, shiftColors }: any)
                     <p className="text-xs text-gray-500">{s?.specialization}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-mono text-gray-700"><span>{shift.startTime}</span> - <span>{shift.endTime}</span></p>
+                    <p className="text-sm font-mono text-gray-700"><span>{format12Hour(shift.startTime)}</span> - <span>{format12Hour(shift.endTime)}</span></p>
                   </div>
                 </div>
               );
@@ -174,7 +173,7 @@ function WeekView({ shifts, staff, shiftColors }: any) {
                     <p className="text-xs font-medium text-gray-800 truncate mt-0.5">
                       {s?.role === 'doctor' ? 'Dr. ' : ''}{s?.firstName} {s?.lastName}
                     </p>
-                    <p className="text-[10px] text-gray-500">{shift.startTime}-{shift.endTime}</p>
+                    <p className="text-[10px] text-gray-500">{format12Hour(shift.startTime)}-{format12Hour(shift.endTime)}</p>
                   </div>
                 );
               })}
@@ -326,7 +325,7 @@ export function FindDoctor() {
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold capitalize ${simpleShiftColors[shift.shiftType]}`}>
                           <span>{shift.shiftType}</span>
                         </span>
-                        <span className="text-xs text-gray-500"><span>{shift.startTime}</span>-<span>{shift.endTime}</span></span>
+                        <span className="text-xs text-gray-500"><span>{format12Hour(shift.startTime)}</span>-<span>{format12Hour(shift.endTime)}</span></span>
                       </div>
                     ))}
                   </div>

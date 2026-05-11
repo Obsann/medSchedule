@@ -20,17 +20,7 @@ router.get('/', async (req, res) => {
     if (status) filter.status = status;
     if (shiftType) filter.shiftType = shiftType;
 
-    // Patient restrictions: strictly lock to today's date
-    if (req.user.role === 'patient') {
-      const today = new Date();
-      // Adjust to local date string (YYYY-MM-DD)
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      filter.date = `${year}-${month}-${day}`;
-    } else {
-      if (date) filter.date = date;
-    }
+    if (date) filter.date = date;
 
     const items = await Shift.find(filter).sort({ date: 1, startTime: 1 });
 

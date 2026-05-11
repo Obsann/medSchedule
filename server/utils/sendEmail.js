@@ -1,31 +1,27 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 /**
- * Send an email using the Resend API (HTTP-based, not blocked by cloud hosts).
- * Requires process.env.RESEND_API_KEY
+ * Send an email using Nodemailer + Gmail SMTP.
+ * Requires process.env.SMTP_USER and process.env.SMTP_PASS (Gmail App Password).
  */
 const sendEmail = async ({ to, subject, html }) => {
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const transporter = nodemailer.createTransport({
+      service: process.env.SMTP_SERVICE || 'gmail',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
-    // Resend requires a verified domain to send FROM.
-    // During testing, you can send emails TO your own email address 
-    // using the default 'onboarding@resend.dev' sender.
-    const sender = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-
-    const { data, error } = await resend.emails.send({
-      from: `medSchedule <${sender}>`,
-      to: [to],
+    const info = await transporter.sendMail({
+      from: `medSchedule <${process.env.SMTP_USER}>`,
+      to,
       subject,
       html,
     });
 
-    if (error) {
-      console.error('Resend API error:', error);
-      return false;
-    }
-
-    console.log(`Email sent to ${to} [MessageId: ${data?.id}]`);
+    console.log(`Email sent to ${to} [MessageId: ${info.messageId}]`);
     return true;
   } catch (error) {
     console.error('Email send failed:', error.message || error);

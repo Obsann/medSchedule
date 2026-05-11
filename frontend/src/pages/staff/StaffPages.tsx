@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { format, parseISO, startOfWeek, addDays } from 'date-fns';
 import { CalendarDays, Clock, User, Save, MapPin, Phone, Mail } from 'lucide-react';
+import { format12Hour } from '../../utils/timeFormat';
 
 export function MyShifts() {
   const { user } = useAuth();
@@ -80,7 +81,7 @@ export function MyShifts() {
                             {shift.shiftType} Shift
                           </span>
                           <p className="text-sm text-gray-600 flex items-center gap-1">
-                            <Clock className="w-4 h-4" /> {shift.startTime} - {shift.endTime}
+                            <Clock className="w-4 h-4" /> {format12Hour(shift.startTime)} - {format12Hour(shift.endTime)}
                           </p>
                           <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
                             <MapPin className="w-3 h-3" /> {getDepartmentName(shift.departmentId)}
@@ -110,7 +111,7 @@ export function MyShifts() {
                     <div key={shift.id} className="px-6 py-3 flex items-center gap-4 opacity-60">
                       <span className="text-xs text-gray-400 w-20">{format(parseISO(shift.date), 'MMM dd, EEE')}</span>
                       <span className="text-xs text-gray-500 capitalize">{shift.shiftType}</span>
-                      <span className="text-xs text-gray-400">{shift.startTime}-{shift.endTime}</span>
+                      <span className="text-xs text-gray-400">{format12Hour(shift.startTime)}-{format12Hour(shift.endTime)}</span>
                       <span className="text-xs text-gray-300 ml-auto">Completed</span>
                     </div>
                   ))}
@@ -167,7 +168,7 @@ function CalendarView({ shifts }: { shifts: any[] }) {
           {/* Time slots */}
           {hours.map(hour => (
             <div key={hour} className="grid grid-cols-8 border-b border-gray-100 min-h-[40px]">
-              <div className="p-2 text-xs text-gray-400 font-mono border-r border-gray-200 flex items-start">{hour}</div>
+              <div className="p-2 text-xs text-gray-400 font-mono border-r border-gray-200 flex items-start">{format12Hour(hour)}</div>
               {weekDays.map(day => {
                 const dateStr = format(day, 'yyyy-MM-dd');
                 const hourShifts = shifts.filter(s => s.date === dateStr && s.startTime <= hour && s.endTime > hour);

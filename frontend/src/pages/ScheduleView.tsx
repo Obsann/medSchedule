@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight, Clock, Search, Filter } from 'lucide-react';
+import { format12Hour } from '../utils/timeFormat';
 
 export default function ScheduleView() {
   const { shifts, staff, departments, getStaffName, getDepartmentName } = useData();
@@ -146,7 +147,7 @@ export default function ScheduleView() {
                               return (
                                 <div key={sh.id} className={`px-2 py-1 rounded-lg text-[10px] font-bold capitalize ${colors.bg} ${colors.text}`}>
                                   {sh.shiftType}
-                                  <span className="block text-[9px] font-normal">{sh.startTime}</span>
+                                  <span className="block text-[9px] font-normal">{format12Hour(sh.startTime)}</span>
                                 </div>
                               );
                             })}

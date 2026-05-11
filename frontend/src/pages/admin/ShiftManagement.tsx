@@ -3,6 +3,7 @@ import { useData } from '../../context/DataContext';
 import type { ShiftType, Shift } from '../../types';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus, X, Clock, AlertTriangle } from 'lucide-react';
+import { format12Hour } from '../../utils/timeFormat';
 
 const SHIFT_TYPES: { type: ShiftType; start: string; end: string; label: string; color: string; bgColor: string }[] = [
   { type: 'morning', start: '07:00', end: '13:00', label: 'Morning', color: 'text-amber-700', bgColor: 'bg-amber-50 border-amber-200' },
@@ -110,7 +111,7 @@ export default function ShiftManagement() {
         {SHIFT_TYPES.map(t => (
           <div key={t.type} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${t.bgColor}`}>
             <Clock className={`w-4 h-4 ${t.color}`} />
-            <span className={`text-xs font-medium ${t.color}`}>{t.label} ({t.start}-{t.end})</span>
+            <span className={`text-xs font-medium ${t.color}`}>{t.label} ({format12Hour(t.start)}-{format12Hour(t.end)})</span>
           </div>
         ))}
       </div>
@@ -154,7 +155,7 @@ export default function ShiftManagement() {
                       <p className="font-medium text-gray-800 truncate">
                         {staffMember?.role === 'doctor' ? 'Dr. ' : ''}{staffMember?.firstName} {staffMember?.lastName}
                       </p>
-                      <p className="text-gray-500 mt-0.5">{shift.startTime}-{shift.endTime}</p>
+                      <p className="text-gray-500 mt-0.5">{format12Hour(shift.startTime)}-{format12Hour(shift.endTime)}</p>
                       {shift.notes && <p className="text-gray-400 mt-0.5 italic truncate">{shift.notes}</p>}
                     </div>
                   );
@@ -217,7 +218,7 @@ export default function ShiftManagement() {
                     >
                       <Clock className={`w-5 h-5 mx-auto mb-1 ${form.shiftType === t.type ? t.color : 'text-gray-400'}`} />
                       <p className={`text-xs font-bold ${form.shiftType === t.type ? t.color : 'text-gray-600'}`}>{t.label}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{t.start}-{t.end}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{format12Hour(t.start)}-{format12Hour(t.end)}</p>
                     </button>
                   ))}
                 </div>

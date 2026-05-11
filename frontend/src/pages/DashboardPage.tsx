@@ -7,6 +7,7 @@ import {
   BarChart3, Sunrise, Sun, Moon, CheckCircle2, XCircle, UserX,
   Heart, PhoneCall, MapPin
 } from 'lucide-react';
+import { format12Hour } from '../utils/timeFormat';
 
 interface DashboardPageProps {
   onNavigate: (page: string) => void;
@@ -253,7 +254,7 @@ function AdminDashboard({ onNavigate, activeStaff, doctors, nurses, onLeave, ina
                       <p className="text-xs text-gray-500">{getDepartmentName(shift.departmentId)}</p>
                       {shift.notes && <p className="text-[11px] text-gray-400 italic truncate mt-0.5">💬 {shift.notes}</p>}
                     </div>
-                    <span className="text-xs text-gray-500 font-mono whitespace-nowrap">{shift.startTime} – {shift.endTime}</span>
+                    <span className="text-xs text-gray-500 font-mono whitespace-nowrap">{format12Hour(shift.startTime)} – {format12Hour(shift.endTime)}</span>
                   </div>
                 );
               })}
@@ -279,7 +280,7 @@ function AdminDashboard({ onNavigate, activeStaff, doctors, nurses, onLeave, ina
               <p className="text-sm text-gray-600">{getDepartmentName(nextShift.departmentId)}</p>
               <div className="mt-3 flex items-center gap-2">
                 <span className="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs font-bold capitalize">{nextShift.shiftType}</span>
-                <span className="text-sm text-gray-700 font-mono">{nextShift.startTime} – {nextShift.endTime}</span>
+                <span className="text-sm text-gray-700 font-mono">{format12Hour(nextShift.startTime)} – {format12Hour(nextShift.endTime)}</span>
               </div>
             </div>
           )}
@@ -458,7 +459,7 @@ function StaffDashboard({ onNavigate, staffId, shifts, staffList, getDepartmentN
                     <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold capitalize mb-1 ${shiftColors[shift.shiftType]}`}>
                       {shift.shiftType} Shift
                     </span>
-                    <p className="text-sm text-gray-600 font-medium">{shift.startTime} – {shift.endTime}</p>
+                    <p className="text-sm text-gray-600 font-medium">{format12Hour(shift.startTime)} – {format12Hour(shift.endTime)}</p>
                     <p className="text-xs text-gray-400">{getDepartmentName(shift.departmentId)}</p>
                     {shift.notes && <p className="text-[11px] text-gray-400 italic mt-0.5">💬 {shift.notes}</p>}
                   </div>
@@ -528,7 +529,7 @@ function StaffDashboard({ onNavigate, staffId, shifts, staffList, getDepartmentN
                       {s.shiftType}
                     </span>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{s.startTime} – {s.endTime}</p>
+                      <p className="text-sm font-medium text-gray-900">{format12Hour(s.startTime)} – {format12Hour(s.endTime)}</p>
                       {s.notes && <p className="text-[11px] text-gray-500 italic">💬 {s.notes}</p>}
                     </div>
                   </div>
@@ -646,7 +647,7 @@ function PatientDashboard({ onNavigate }: { onNavigate: (page: string) => void }
                       </span>
                     </div>
                     <p className="text-xs text-gray-500">{staffMember?.specialization}</p>
-                    <p className="text-[11px] text-gray-400">{shift.startTime} – {shift.endTime} · {departments.find(d => d.id === shift.departmentId)?.name}</p>
+                    <p className="text-[11px] text-gray-400">{format12Hour(shift.startTime)} – {format12Hour(shift.endTime)} · {departments.find(d => d.id === shift.departmentId)?.name}</p>
                   </div>
                   <button 
                     onClick={() => {
