@@ -3,6 +3,8 @@ import { useData } from '../../context/DataContext';
 import { format, parseISO, startOfWeek, addDays } from 'date-fns';
 import { Search, CalendarDays, Clock, Building2, Stethoscope, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { format12Hour } from '../../utils/timeFormat';
+
+export function PatientScheduleViewer() {
   const { shifts, staff, departments } = useData();
   const [filterDept, setFilterDept] = useState('all');
   const [filterType, setFilterType] = useState<string>('all');
