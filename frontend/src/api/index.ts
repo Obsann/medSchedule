@@ -283,6 +283,14 @@ export const shiftsApi = {
     });
   },
 
+  async generate(token: string, startDate?: string): Promise<ApiResponse<{ count: number }>> {
+    return fetchApi<{ count: number }>('/shifts/generate', {
+      method: 'POST',
+      body: JSON.stringify({ startDate }),
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  },
+
   async update(token: string, id: string, data: Partial<Shift>): Promise<ApiResponse<Shift>> {
     return fetchApi<Shift>(`/shifts/${id}`, {
       method: 'PUT',

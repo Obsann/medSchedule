@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, Clock, Search, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Search, Filter, CalendarPlus, Loader2 } from 'lucide-react';
 import { format12Hour } from '../utils/timeFormat';
+import { useAuth } from '../context/AuthContext';
 
 export default function ScheduleView() {
-  const { shifts, staff, departments, getStaffName, getDepartmentName } = useData();
+  const { shifts, staff, departments, getStaffName, getDepartmentName, generateSchedule } = useData();
+  const { user } = useAuth();
+  const [isGenerating, setIsGenerating] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
   const [filterDept, setFilterDept] = useState('all');
   const [filterType, setFilterType] = useState<string>('all');
@@ -27,6 +30,16 @@ export default function ScheduleView() {
     return true;
   });
 
+  const handleGenerate = async () => {
+    if (!window.confirm('This will automatically assign shifts for the next 2 months for all active staff. Are you sure you want to proceed?')) return;
+    setIsGenerating(true);
+    const today = new Date();
+    today.setDate(today.getDate() + 1); // Start generating from tomorrow by default
+    const startDate = today.toISOString().split('T')[0];
+    await generateSchedule(startDate);
+    setIsGenerating(false);
+  };
+
   const shiftColors: Record<string, { bg: string; text: string }> = {
     morning: { bg: 'bg-amber-50', text: 'text-amber-700' },
     afternoon: { bg: 'bg-blue-50', text: 'text-blue-700' },
@@ -36,9 +49,21 @@ export default function ScheduleView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Full Schedule</h1>
-        <p className="text-sm text-gray-500 mt-1">Complete view of all scheduled shifts</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Full Schedule</h1>
+          <p className="text-sm text-gray-500 mt-1">Complete view of all scheduled shifts</p>
+        </div>
+        {user?.role === 'admin' && (
+          <button 
+            onClick={handleGenerate}
+            disabled={isGenerating}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+          >
+            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />}
+            {isGenerating ? 'Generating...' : 'Auto-Generate (2 Months)'}
+          </button>
+        )}
       </div>
 
       {/* Controls */}

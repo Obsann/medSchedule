@@ -27,6 +27,7 @@ interface DataContextType {
   addShift: (s: Omit<Shift, 'id'>) => Promise<boolean>;
   updateShift: (s: Shift) => Promise<void>;
   deleteShift: (id: string) => Promise<void>;
+  generateSchedule: (startDate?: string) => Promise<boolean>;
   getStaffName: (staffId: string) => string;
   getDepartmentName: (deptId: string) => string;
   refreshData: () => Promise<void>;
@@ -229,6 +230,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast]);
 
+  const generateSchedule = useCallback(async (startDate?: string): Promise<boolean> => {
+    const token = getSavedToken();
+    if (!token) return false;
+    const res = await shiftsApi.generate(token, startDate);
+    if (res.status === 201) {
+      addToast(res.message || 'Schedule generated successfully', 'success');
+      await fetchData(true);
+      return true;
+    } else {
+      addToast(res.message || 'Failed to generate schedule', 'error');
+      return false;
+    }
+  }, [addToast, fetchData]);
+
   // ─── Exposed Methods ──────────────────────────────────────────────────────
   const refreshData = async () => {
     await fetchData(true);
@@ -253,7 +268,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addToast, removeToast,
       addDepartment, updateDepartment, deleteDepartment,
       addStaff, updateStaff, deleteStaff,
-      addShift, updateShift, deleteShift,
+      addShift, updateShift, deleteShift, generateSchedule,
       getStaffName, getDepartmentName,
       refreshData,
     }}>

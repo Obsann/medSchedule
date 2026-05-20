@@ -2,6 +2,7 @@ const express = require('express');
 const Shift = require('../models/Shift');
 const Staff = require('../models/Staff');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { generateSchedule } = require('../utils/scheduleGenerator');
 
 const router = express.Router();
 
@@ -102,6 +103,33 @@ router.post('/', requireRole('admin'), async (req, res) => {
   } catch (error) {
     console.error('Create shift error:', error);
     res.status(500).json({ status: 500, message: 'Failed to create shift' });
+  }
+});
+
+// ─── POST /api/shifts/generate ───────────────────────────────────────────────
+router.post('/generate', requireRole('admin'), async (req, res) => {
+  try {
+    const { startDate } = req.body;
+    
+    // Check if shifts already exist for this period to avoid double generation?
+    // We'll let the user generate, maybe they cleared the shifts first, or we can just append.
+    // For simplicity, we just generate and insert.
+    
+    const newShifts = await generateSchedule(startDate);
+    
+    // Insert them in bulk
+    const inserted = await Shift.insertMany(newShifts);
+    
+    res.status(201).json({
+      status: 201,
+      message: `Successfully generated ${inserted.length} shifts for 2 months.`,
+      data: {
+        count: inserted.length
+      }
+    });
+  } catch (error) {
+    console.error('Generate schedule error:', error);
+    res.status(500).json({ status: 500, message: error.message || 'Failed to generate schedule' });
   }
 });
 
